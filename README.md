@@ -34,6 +34,9 @@ lake build          # 會抓取 Velvet/Loom 相依並驗證所有檔案
 `prove_correct` 預設用 Lean 的 `grind`；SMT 後端（z3/cvc5）由 Velvet
 的建置流程自動下載。
 
+> 完整的安裝需求、步驟與常見問題見 [INSTALL.md](INSTALL.md)。
+> 第一次建置需下載約 7 GB 相依（含 mathlib）並耗時 10 分鐘以上。
+
 > 注意：本專案在無法連外的環境中撰寫，尚未實際以 `lake build` 驗證過；
 > `attribute [grind]` 提示與個別 `prove_correct` 可能需要按照
 > [Velvet 文件](https://github.com/verse-lab/velvet/blob/master/velvet_documentation.md)
