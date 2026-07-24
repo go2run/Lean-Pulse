@@ -42,7 +42,7 @@ method newHeapRef (mut store : Store) (v : Int) return (r : Nat)
     store := store.push (some v)
     return r
 
-attribute [grind] Array.size_push Array.getElem!_push Array.size_set Array.getElem!_set
+attribute [grind] Array.size_push Array.getElem_push Array.size_set Array.getElem_set
 
 prove_correct newHeapRef by
   loom_solve
@@ -56,17 +56,14 @@ prove_correct newHeapRef by
 method lastValueOf (mut store : Store) (r : Nat) return (v : Int)
     require r < store.size
     require store[r]! ≠ none                       -- 持有 Box.pts_to r 'v
-    ensures some v = storeOld[r]!                  -- v == 'v
+    ensures ∀ w, storeOld[r]! = some w → v = w     -- v == 'v（require 保證這樣的 w 存在）
     ensures store.size = storeOld.size
     ensures store[r]! = none                       -- free 之後資產消失
     ensures ∀ k, k < store.size ∧ k ≠ r → store[k]! = storeOld[k]!
     do
-    match store[r]! with
-    | some v =>
-      store := store.set! r none                   -- free r
-      return v
-    | none =>
-      return 0    -- require 排除了這條路徑
+    let v := (store[r]!).getD 0
+    store := store.set! r none                     -- free r
+    return v
 
 prove_correct lastValueOf by
   loom_solve
@@ -83,12 +80,9 @@ method incrBox (mut store : Store) (r : Nat) return (u : Unit)
     ensures ∀ v, storeOld[r]! = some v → store[r]! = some (v + 1)
     ensures ∀ k, k < store.size ∧ k ≠ r → store[k]! = storeOld[k]!
     do
-    match store[r]! with
-    | some v =>
-      store := store.set! r (some (v + 1))
-      return
-    | none =>
-      return
+    let v := (store[r]!).getD 0
+    store := store.set! r (some (v + 1))
+    return
 
 prove_correct incrBox by
   loom_solve

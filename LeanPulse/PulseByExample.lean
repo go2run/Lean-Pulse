@@ -23,6 +23,7 @@ set_option loom.semantics.choice "demonic"
 
 /- Pulse:
      fn five () returns n:int ensures pure (n == 5) { fstar_five }  -/
+@[reducible]
 def fstar_five : Int := 5
 
 method five (u : Unit) return (n : Int)
@@ -87,7 +88,7 @@ method arrSwap (mut arr : Array Int) (i : Nat) (j : Nat) return (u : Unit)
     arr := arr.set! j vi
     return
 
-attribute [grind] Array.size_set Array.getElem!_set
+attribute [grind] Array.size_set Array.getElem_set
 
 prove_correct arrSwap by
   loom_solve
