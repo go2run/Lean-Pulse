@@ -13,6 +13,7 @@
 | `PulseTutorial.Intro.fst` | `LeanPulse/Intro.lean` | incr、ghost 參數、frame rule |
 | `PulseTutorial.Ref.fst` | `LeanPulse/Ref.lean` | 讀寫、權限模型的對應、失敗案例 |
 | `PulseTutorial.Box.fst` | `LeanPulse/Box.lean` | 堆積配置/釋放的顯式建模 |
+| `PulseTutorial.Conditionals.fst` | `LeanPulse/Conditionals.lean` | 分支匯合點、nullable pointer、自動化的邊界 |
 
 核心翻譯原則（詳見各檔案開頭的對照表）：
 
