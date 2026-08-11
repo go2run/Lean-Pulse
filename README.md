@@ -23,6 +23,32 @@
 - `Box.alloc`/`free` ↦ 顯式 store 建模（`Array (Option Int)`），frame 條款手寫
 - Pulse 的並行（`par`）：Velvet 無對應——這是分離邏輯不可替代的地盤
 
+## Velvet 入門教材
+
+[doc/VelvetTutorial.md](doc/VelvetTutorial.md) 是六節的 Velvet 語法入門；
+[VelvetTutorial.lean](VelvetTutorial.lean) 是它全部範例的可執行實作（單檔、獨立的
+`lean_lib`），含正確版與兩類錯誤版：**驗證會過但規格太弱**的（活的程式碼，
+`prove_correct` 就在下面）與**證不出來**的（只留 `method`，`prove_correct` 註解掉）。
+
+```sh
+lake build VelvetTutorial
+```
+
+## Velvet 自動化的邊界：LeetCode 917
+
+拿 [Reverse Only Letters](https://leetcode.com/problems/reverse-only-letters/) 當實例，
+兩個獨立 `lean_lib`：
+
+- [LeanLC917.lean](LeanLC917.lean) — 純 Lean 4 前向掃描解法 + 完整正確性證明。
+  **零相依**（連 Velvet 和 mathlib 都不用），可以單獨拿走。
+- [VelvetLC917.lean](VelvetLC917.lean) — 同一題的 Velvet 雙指標版，規格引用
+  `LeanLC917.revOnly` 當參考實作。完整規格 `loom_solve` 證不出來（附實際錯誤訊息與診斷）；
+  換成弱規格會自動過，但「什麼都不做」也一樣過。
+
+```sh
+lake build LeanLC917 VelvetLC917
+```
+
 ## 建置
 
 需要 [elan](https://github.com/leanprover/elan)（Lean 工具鏈管理器）與網路：

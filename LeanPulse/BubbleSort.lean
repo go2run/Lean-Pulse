@@ -59,9 +59,11 @@ method bubbleSort (mut a : Array Int) return (u : Unit)
     do
     let mut i := a.size - 1
     while 0 < i
-      invariant a.size = aOld.size
-      invariant i < a.size
+      invariant a.size = aOld.size -- [ * * * * * * * * ]
+      invariant i < a.size         -- [       i|  ∀p≤∀q ]
       invariant ∀ p q, i < p ∧ p ≤ q ∧ q < a.size → a[p]! ≤ a[q]!   -- 後綴已排序
+                                   -- [ * * * * * * * * ]
+                                   -- [   ∀p  i|  ∀q    ]
       invariant ∀ p q, p ≤ i ∧ i < q ∧ q < a.size → a[p]! ≤ a[q]!   -- 前綴 ≤ 後綴
       done_with i = 0
       do
@@ -72,10 +74,13 @@ method bubbleSort (mut a : Array Int) return (u : Unit)
         invariant j ≤ i
         invariant ∀ p q, i < p ∧ p ≤ q ∧ q < a.size → a[p]! ≤ a[q]!
         invariant ∀ p q, p ≤ i ∧ i < q ∧ q < a.size → a[p]! ≤ a[q]!
+                                   -- [ * * * * * * * * ]
+                                   -- [   p      |j     ]
+                                   -- [|p=j             ]
         invariant ∀ p, p ≤ j → a[p]! ≤ a[j]!                         -- a[j] 是 [0,j] 的最大值
         done_with j = i
         do
-        if a[j]! > a[j + 1]! then
+        if a[j]! > a[j + 1]! then 
           swap! a[j]! a[j + 1]!
         j := j + 1
       i := i - 1
