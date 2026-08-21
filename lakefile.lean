@@ -21,3 +21,14 @@ lean_lib LeanLC917
 -- 同一題的 Velvet 雙指標版，規格引用 LeanLC917 當參考實作
 @[default_target]
 lean_lib VelvetLC917
+
+-- 對應 doc/VelvetExec.md：抽取可執行程式 + 編譯成原生執行檔
+@[default_target]
+lean_lib VelvetExec
+
+lean_exe velvet_demo where
+  root := `Main
+
+-- 對應 doc/VelvetExec.md §8：用 @[export] 把抽取出來的程式暴露成 C 符號
+-- 產出由 ffi/build.sh 連結（C 執行檔 + 共享函式庫）
+lean_lib VelvetFFI

@@ -34,6 +34,30 @@
 lake build VelvetTutorial
 ```
 
+## 從驗證到執行檔
+
+[doc/VelvetExec.md](doc/VelvetExec.md) 解釋 Velvet 在 Lean 4 中的執行模型
+（`method` 展開成什麼、`VelvetM` / `NonDetT` / `DivM` 各是什麼），以及如何用
+`extract_program_for` 抽取可執行程式、用 `lean_exe` 編譯成原生執行檔。
+可執行對照檔是 [VelvetExec.lean](VelvetExec.lean)（Velvet 端）與
+[Main.lean](Main.lean)（`IO` 端）。
+
+```sh
+lake build VelvetExec              # 驗證 + 抽取 + tester + 隨機測試
+lake build velvet_demo             # 編譯成原生執行檔
+./.lake/build/bin/velvet_demo 3 1 4 1 5
+```
+
+同一份文件的 §7 回答「能不能抽取成其他程式語言」：Velvet 沒有多語言後端，但可以用
+`@[export]` 走 Lean 的 C 後端讓 C／Python 直接呼叫驗證過的程式
+（[VelvetFFI.lean](VelvetFFI.lean) + [ffi/](ffi/)）：
+
+```sh
+./ffi/build.sh                     # 產生 C 執行檔與 libvelvet.so 並各跑一次
+```
+
+產物說明（哪個能直接執行、哪個是中間檔）見 [ffi/README.md](ffi/README.md)。
+
 ## Velvet 自動化的邊界：LeetCode 917
 
 拿 [Reverse Only Letters](https://leetcode.com/problems/reverse-only-letters/) 當實例，
