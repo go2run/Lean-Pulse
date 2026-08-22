@@ -75,6 +75,7 @@ Velvet 的 `VelvetM = NonDetT DivM` 是純值上的不確定性 + 發散，沒�
 | 03 | `Opt03_Interface` | 統一成 interface | 各寫各的簽章與前條件 | ⚠ | 中 |
 | 04 | `Opt04_TicksAbsolute` | `ticks ≤ f n`；`f` 升格成 rubric 參數 | bogosort；一種複雜度一份規格 | ✅ | 低 |
 | 05 | `Opt05_TicksRelative` | 改成 `ticks ≤ ticksOld + f n` | **（不防作弊）** 遞迴界限疊不起來 | ✅ | 低 |
+| 05.5 | `Opt05b_Composition` | rubric 層（非 method 層）的界限可組合 | **（不防作弊）** 補驗，非新的一刀 | ✅ | 低 |
 | 06 | `Opt06_MonotonicTicks` | M1 抽象 `Ticks`（`private mk`） | 老實計費，最後 `ticks := ticksOld` | ⬜ | 中 |
 | 07 | `Opt07_InstrOrder` | M2 面 1：比較器必計費、不說謊 | 不計費／亂回答的比較器 | ⬜ | 中 |
 | 08 | `Opt08_AbstractElem` | M2 面 3：`SpecOrder`(Prop) + 抽象 α | 用 `Int` 直接 `x < y` 繞過比較器 | ⬜ | **高** |
@@ -127,21 +128,13 @@ Velvet 的 `VelvetM = NonDetT DivM` 是純值上的不確定性 + 發散，沒�
 
 ## 自動化屬性預算表（`@[grind]` / `@[simp]`）
 
-> 與 typeclass 預算表同一個模式，理由也同一個：**屬性是全域的**，
-> 而自動化互相干擾的 bug 比型別錯誤難查得多。第 06、08 次還會再加。
+> **正本在 [`AttributeBudget.md`](AttributeBudget.md)。** 動任何全域屬性之前先去那裡加一列（R15）。
+> 這裡只留下這張表付過紅利的那一次教訓，因為它是本專案的核心方法論之一。
 
-| 屬性 | 宣告於 | 為什麼需要 | 風險 |
-|---|---|---|---|
-| `attribute [grind] Array.multiset_swap` | Opt02、兩支 `Unresolved_*` | 跨 `swap!` 的 multiset 保存 invariant；官方 `Examples.lean:47` 亦如此 | 低（Velvet 自己的引理） |
-| `@[grind] def Sorted` | Opt02 | **前提性**：不加則 `ensures Sorted arr` 會讓 `loom_solve!` 卡住，規格就只能就地展開 —— 見下方依賴鏈 | 低 |
-| `@[grind] def SameElements` | Opt02 | 同上 | 低 |
-| `@[grind] sorted_replicate_zero` | Opt01 | `loom_solve` 不處理 `Array.replicate` | 低（只在 Opt01 用到） |
-| `@[grind] pad_within_sq` | `Unresolved_FakeCounterPadded` | `n - 1 ≤ n * n` 的 Nat 乘法推理 | 低（葉節點模組，不外洩） |
-| ~~`@[grind] tick_step`~~ | **試過，已移除** | 想補第 04 次緊界限的非線性步 | 🚫 **它主動破壞了不相關的平凡目標**——加上之後連 `⊢ SameElements arrOld arrOld`（rfl）都證不出來，拿掉立刻恢復。詳見 `Opt04_Notes.md` §6.1 |
-
-> ★ **這張表已經付過一次紅利**：第 04 次加了一條**正確無誤**的引理 `tick_step` 並標上 `@[grind]`，
-> 結果 `loom_solve!` 開始在完全不相關的平凡目標上失敗（`⊢ SameElements arrOld arrOld`）。
-> 拿掉屬性、引理不動，立刻恢復。**一條正確的引理也可能是一條壞的自動化提示。**
+> ★ **第 04 次加了一條*正確無誤*的引理 `tick_step` 並標上 `@[grind]`，
+> 結果 `loom_solve!` 開始在完全不相關的平凡目標上失敗**（`⊢ SameElements arrOld arrOld`，
+> 那是 `rfl`）。拿掉屬性、引理不動，立刻恢復。
+> **一條正確的引理也可能是一條壞的自動化提示。** 詳見 `Opt04_Notes.md` §6.1。
 
 **目前宣告了 0 個 `@[simp]`。** 決定 (二) 的教訓：
 `and_comm` 之類的 permutative lemma 一旦進 simp set 就會跟後續宣告互相干擾，
@@ -185,6 +178,10 @@ ensures Sorted arr 沒有 @[grind]
 | **R12** | **否證之前先跑控制組。**<br>當一個實驗沒有出現預期的效果時，在記下「預期不成立」之前，必須先跑一個控制組，確認**實驗裝置本身是有效的**——把被測的變因換成已知會成功／已知會失敗的版本，確認裝置給出對應的結果。<br>**沒有控制組的否定結論，一律記為 `INCONCLUSIVE`，不記為「不成立」。**<br><br>鏡像的一條同樣要遵守：**一支作弊「失敗了」，不代表它是被規格殺的**——可能是語法錯誤、`unknown identifier`、timeout 或無關的 elaboration 問題。那樣的紀錄在 kill 表裡是**假陽性**。 |
 | **P1** | **自動化屬性：local 優先，全域要有理由。**<br>預設用 `grind [lemma]`（局部）。同一條引理被局部使用 ≥3 處，才考慮升級成 `@[grind]`，並在預算表記錄升級理由。 |
 | **P2** | **動屬性必須全量 rebuild。**<br>新增或移除任何 `@[grind]` / `@[simp]` 之後，必須重跑**全部已完成步驟**的 build，不能只跑當前步驟。<br>*理由*：一條**正確**的引理可以讓三步前的證明失敗（第 04 次實際發生過，見 `Opt04_Notes.md` §6.1）。 |
+| **R13** | **型別遷移閘。**<br>每一次改 `ArraySort` 的形狀，必須在**同一個 commit** 內把所有既有 instance、所有 `Cheats/`、所有 SPOTs 一起遷移完，且 `lake build SortRubric` 綠。<br>**不接受「先改 structure，instance 下一個 commit 補」。**<br>*理由*：中間狀態下 kill 表是無效的——舊作弊可能靜默復活而沒人看得出來。 |
+| **R14** | **kill 表單調性。**<br>每一步結束要**重跑全部 `Cheats/`**，並在該步 Notes 貼出「死者名單不變或增長」的證據。任何一步讓已死的作弊復活 = **該步未完成**。<br>*理由*：第 04 次的屬性燒傷讓三步前的證明失敗。屬性與型別遷移都可能靜默地放走舊作弊。 |
+| **R15** | **屬性預算表是動屬性的前置條件。**<br>新增任何全域 `@[grind]` / `@[simp]` 之前，先在 [`AttributeBudget.md`](AttributeBudget.md) 加一列（屬性名、加它是為了讓哪個目標過、風險評估）；動屬性後**全量 rebuild** 並跑 R14。<br>（這是 P1／P2 的可執行版。） |
+| **R16** | **測試起點隔離。**<br>`Ticks` 的任何公開起點（`Ticks.mkForTesting`）只准出現在 `Opt10_Audit.lean` 與 `*_Tests.lean`。`Cheats/` 與所有實作檔**不得 import** 它。由 `check_isolation.sh` 的 **fail-closed** 版強制。<br>*理由*：把 `Ticks.zero` 公開等於把 `ResetToOld` 直接送回來。 |
 
 ---
 
@@ -195,6 +192,8 @@ ensures Sorted arr 沒有 @[grind]
 | [`Opt00_Recon.md`](Opt00_Recon.md) | 環境勘查報告：真實 API 逐字摘錄、四個問題的實測答案、已知環境債 |
 | [`Opt00_GUIDE_ERRATA.md`](Opt00_GUIDE_ERRATA.md) | 指引勘誤表，可併回專案端指引 |
 | [`PROGRESS.md`](PROGRESS.md) | 進度表 |
+| [`AttributeBudget.md`](AttributeBudget.md) | **全域 `@[grind]` / `@[simp]` 預算表（R15 的正本）** |
+| [`UPSTREAM_REPORT.md`](UPSTREAM_REPORT.md) | 上游回報：失敗的 `prove_correct` 靜默注入 `sorry`（一種模式、兩個實例、一組控制組） |
 | [`check_build.sh`](check_build.sh) | 每步驗收（R4） |
 | [`check_isolation.sh`](check_isolation.sh) | import 隔離的機械證明 |
 | [`baseline_errors.txt`](baseline_errors.txt) | 釘住的既有環境債簽名 |

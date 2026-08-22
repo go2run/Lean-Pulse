@@ -11,9 +11,9 @@
 | 03 | Interface | ⚠ 大致完成 | ✓ 全過 | 1 個（多一條前條件） | **第二支正確實作未完成**（氣泡排序 2 次未過，R8），見 Opt03_Notes §5 |
 | 04 | TicksAbsolute | ✅ 完成（目標 (i)） | ✓ 全過 | bogosort；一種複雜度一份規格 | (ii) 仍 BLOCKED；(iii) 記為已知缺口 |
 | 05 | TicksRelative | ✅ 完成 | ✓ 全過 | （不防作弊） | ★ 帶 R12 控制組：同程式碼同語法、只換相對界限 → 通過 |
+| 05.5 | Composition | ✅ 完成 | ✓ 全過 | （不防作弊） | ★ rubric 層界限可組合。做法 (a)：2 行 local 引理，**未動 spec**。兩組反向控制組 + 機械反證 |
 | 06 | MonotonicTicks | ⬜ 未開始 | | | `private mk` 機制已預先驗證（Recon §3、§5 F5） |
 | 07 | InstrOrder | ⬜ 未開始 | | | **設計已定案**：純函式 `cmp`（見上方 D-07） |
-| 07 | InstrOrder | ⬜ 未開始 | | | |
 | 08 | AbstractElem | ⬜ 未開始 | | | 前提已驗證；風險高（U3）。**fallback 階梯已定案**（見上方 D-08） |
 | 09 | SortM | ⬜ 未開始 | | | ★ 實驗性。**實驗 2 已提前完成：作弊通過** |
 | 10 | Audit | ⬜ 未開始 | | | `#print axioms` 已確認可用 |
