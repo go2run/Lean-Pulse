@@ -32,3 +32,8 @@ lean_exe velvet_demo where
 -- 對應 doc/VelvetExec.md §8：用 @[export] 把抽取出來的程式暴露成 C 符號
 -- 產出由 ffi/build.sh 連結（C 執行檔 + 共享函式庫）
 lean_lib VelvetFFI
+
+-- 排序 rubric 分階段強化：十次優化（Opt01–Opt10 + 選配 Opt11）
+@[default_target]
+lean_lib SortRubric where
+  globs := #[Glob.submodules `SortRubric]

@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# ============================================================================
+#  檢查器的負向測試  (決定 (一) 加固建議 (c))
+#
+#  理由與 R6 相同：**一個從來沒失敗過的檢查器，不知道它會不會失敗。**
+#  本腳本故意製造兩種違規，確認 check_isolation.sh / check_build.sh
+#  真的會以非零離開碼拒絕它們，然後把現場還原。
+#
+#  用法:  bash SortRubric/check_selftest.sh
+# ============================================================================
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+PROBE="SortRubric/__selftest_probe.lean"
+BASE="SortRubric/baseline_errors.txt"
+BAK="$(mktemp)"
+cp "$BASE" "$BAK"
+
+cleanup() {
+  rm -f "$PROBE"
+  cp "$BAK" "$BASE"; rm -f "$BAK"
+}
+trap cleanup EXIT
+
+FAIL=0
+pass() { echo "  ✓ $1"; }
+fail() { echo "  ✗ $1"; FAIL=1; }
+
+echo "########## 負向測試 1：隔離檢查器抓不抓得到違規 import ##########"
+cat > "$PROBE" <<'EOF'
+import VelvetLC917
+EOF
+if bash SortRubric/check_isolation.sh > /dev/null 2>&1; then
+  fail "check_isolation.sh 對 'import VelvetLC917' 竟然回傳 0 —— 檢查器失效"
+else
+  pass "check_isolation.sh 正確拒絕（非零離開碼）"
+  echo "      證據："
+  bash SortRubric/check_isolation.sh 2>&1 | grep -E '✗|專案根目錄' | head -3 | sed 's/^/        /'
+fi
+rm -f "$PROBE"
+
+echo
+echo "########## 負向測試 2：Cheats/ 圍堵抓不抓得到外洩 ##########"
+cat > "$PROBE" <<'EOF'
+import SortRubric.Cheats.Opt02_Cheat_AllZeros
+EOF
+if bash SortRubric/check_isolation.sh > /dev/null 2>&1; then
+  fail "check_isolation.sh 對 'import SortRubric.Cheats.*' 竟然回傳 0 —— sorryAx 圍堵失效"
+else
+  pass "check_isolation.sh 正確拒絕 Cheats/ 被 import（非零離開碼）"
+  echo "      證據："
+  bash SortRubric/check_isolation.sh 2>&1 | grep -E '✗' | head -2 | sed 's/^/        /'
+fi
+rm -f "$PROBE"
+
+echo
+echo "########## 負向測試 3：baseline 比對抓不抓得到新錯誤 ##########"
+echo "error: FakeModule.lean:1:1: 這是一個不存在的錯誤" >> "$BASE"
+bash SortRubric/check_build.sh > /dev/null 2>&1
+rc=$?
+if [ "$rc" = 3 ]; then
+  pass "check_build.sh 正確偵測到失敗集合不符（exit 3）"
+else
+  fail "check_build.sh 對被竄改的 baseline 回傳 $rc（預期 3）—— 比對邏輯失效"
+fi
+cp "$BAK" "$BASE"
+
+echo
+echo "########## 還原後複驗 ##########"
+if bash SortRubric/check_build.sh > /dev/null 2>&1; then
+  pass "現場已還原，check_build.sh 回到綠燈"
+else
+  fail "還原後仍是紅的 —— 自我測試把現場弄髒了"
+fi
+
+echo
+if [ "$FAIL" = 0 ]; then
+  echo "========== 檢查器本身通過負向測試 =========="
+  exit 0
+else
+  echo "========== ✗ 檢查器有問題，見上 =========="
+  exit 1
+fi

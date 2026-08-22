@@ -1,0 +1,6 @@
+error: VelvetLC917.lean:44:16: Failed to prove assertion
+error: VelvetLC917.lean:34:12: Failed to prove assertion
+error: VelvetLC917.lean:92:33: unsolved goals
+error: Lean exited with code 1
+error: build failed
+- VelvetLC917
