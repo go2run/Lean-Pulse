@@ -74,6 +74,59 @@ prove_correct UseDoubler by loom_solve
 #eval (UseDoubler 3).run   -- DivM.res ((), 4)，而 spec 說 3 * 2 = 6
 ```
 
+### ★ 控制組：連「真話」都會被污染
+
+**檔 A／B 用的是一個假的 spec，那容易讓人以為「只要別寫錯 spec 就沒事」。不是。**
+
+`SortRubric/Cheats/Upstream_ContaminationControl.lean`：
+
+```lean
+-- A' 的 spec 是【真的】：迴圈確實跑兩次、每次加一
+method AddTwo (mut x : Nat) return (u : Unit)
+  ensures x = xOld + 2
+  do
+    let mut i := 0
+    while i < 2
+    invariant i ≤ 2          -- 只是少了 `invariant x = xOld + i`
+    done_with i = 2
+    do
+      x := x + 1
+      i := i + 1
+    return
+
+prove_correct AddTwo by loom_solve
+-- error: unsolved goals ⊢ x_1 = xOld + 2
+#eval (AddTwo 5).run          -- DivM.res ((), 7) ← spec 是對的
+
+-- B' 宣稱的也是【真的】
+method AddFour (mut y : Nat) return (u : Unit)
+  ensures y = yOld + 4
+  do
+    let ⟨_, y1⟩ ← AddTwo y
+    y := y1
+    let ⟨_, y2⟩ ← AddTwo y
+    y := y2
+    return
+
+prove_correct AddFour by loom_solve   -- ★ 綠燈，零訊息
+#eval (AddFour 5).run                 -- DivM.res ((), 9) ← spec 也是對的
+-- 'AddFour_correct' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
+```
+
+| | 檔 A／B（假 spec） | **控制組（真 spec）** |
+|---|---|---|
+| A 的 spec | 假的 | **真的** |
+| B 的 spec | 假的 | **真的** |
+| A 的證明 | 失敗 | 失敗（只是少一條 invariant） |
+| B 的證明 | 綠燈、零訊息 | **綠燈、零訊息** |
+| B 帶 `sorryAx` | ✅ | ✅ |
+
+⇒ **這個 bug 與 spec 的真假完全無關。**
+`loom_solve` 會取用任何掛著 `@[loomSpec]` 的定理，**不管它證明了沒有**。
+
+**沒有人寫錯任何東西**——使用者只是還沒把一個證明做完，
+而工具靜默地宣告了第二個證明成立。
+
 ### 根因
 
 `Velvet/Syntax.lean:411` 產生的是

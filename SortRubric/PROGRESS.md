@@ -12,8 +12,9 @@
 | 04 | TicksAbsolute | ✅ 完成（目標 (i)） | ✓ 全過 | bogosort；一種複雜度一份規格 | (ii) 仍 BLOCKED；(iii) 記為已知缺口 |
 | 05 | TicksRelative | ✅ 完成 | ✓ 全過 | （不防作弊） | ★ 帶 R12 控制組：同程式碼同語法、只換相對界限 → 通過 |
 | 06 | MonotonicTicks | ⬜ 未開始 | | | `private mk` 機制已預先驗證（Recon §3、§5 F5） |
+| 07 | InstrOrder | ⬜ 未開始 | | | **設計已定案**：純函式 `cmp`（見上方 D-07） |
 | 07 | InstrOrder | ⬜ 未開始 | | | |
-| 08 | AbstractElem | ⬜ 未開始 | | | 前提已驗證；`loom_solve` 風險高（U3） |
+| 08 | AbstractElem | ⬜ 未開始 | | | 前提已驗證；風險高（U3）。**fallback 階梯已定案**（見上方 D-08） |
 | 09 | SortM | ⬜ 未開始 | | | ★ 實驗性。**實驗 2 已提前完成：作弊通過** |
 | 10 | Audit | ⬜ 未開始 | | | `#print axioms` 已確認可用 |
 | 11 | Termination（選配） | ⬜ 未開始 | | | 代價已核實：三份 body |
@@ -25,6 +26,65 @@
 3. `Array.toMultiset` 無 typeclass 需求 → 第 08 次不會 BLOCKED
 4. `private mk` 三種偽造路徑全被跨模組擋下 → 第 06 次機制有效
 5. 第 03 次的 bundle 可做到**零橋接證明**（需三個對齊條件，見 Recon §7.1）
+
+## 動手前的決定（第 07、08 次）
+
+### D-07：`InstrOrder.cmp` 用**純函式**，不是 monadic — ✅ 定案
+
+```lean
+-- 指引 §6.7 草稿（從 F* 抄來的形狀）
+cmp : Int → Int → Ticks → VelvetM (Bool × Ticks)   ＋ triple 規格
+
+-- 採用
+cmp    : α → α → Ticks → Bool × Ticks
+bills  : ∀ x y t, (cmp x y t).2 = t.bump
+honest : ∀ x y t, (cmp x y t).1 = true ↔ ord.le x y
+```
+
+**面 1 的三條一條不少**：吃 `Ticks` 參數（不帶計數器就比不了）、
+`.2 = t.bump`（沒有不計費的版本）、`.1 = true ↔ ord.le x y`（不能瞎猜）。
+
+理由（`probe/PURE1.lean` 實測）：
+
+| | 純函式 | monadic |
+|---|---|---|
+| 迴圈本體 | **一行 `let c := iord.cmp a b ticks`，形狀不變** | 每次比較變成一個 bind |
+| 規格形式 | **等式** → grind 可直接當 rewrite | `triple` → 要穿過 WP |
+| F\* 為什麼要 monadic | 它的計數器是**資源**，非得在 Pulse 裡動 | — |
+| 我們的 `Ticks` | 是一個**值**，那層 `VelvetM` 是 cargo-cult | — |
+
+**第 08 次的風險是 grind 失去對序的推理能力**，所以「規格是等式而非 triple」
+這一點特別重要——它是唯一能讓 grind 直接用的形式。
+
+> ⚠ 一處更正：原本的支撐理由說 monadic 版會踩到 mut-call bug。**不會。**
+> 那個 bug 在 `method` 呼叫的 macro（`Syntax.lean:203-236` 查 `globalMutVarsCtx`），
+> 而 `iord.cmp` 是 **structure 欄位**，不是 Velvet method，macro 不會改寫它。
+> 真正的理由是上表的第二列。
+
+**已驗證**：純版本 typecheck、誠實的 `Int` instance 造得出來、
+塞進現有迴圈只多一行、`bills` + `val_bump` 掛 grind 後**計數 invariant 已通過**。
+剩下的是 `honest` 與序推理的接線——那是第 07 次的證明工程。
+
+### D-08：面 3 的 fallback 階梯 — ✅ 先講定
+
+**關鍵認識：面 3 的鑑別內容是型別錯誤，根本不需要一支排序。**
+
+面 3 要證的是「除了 `iord` 沒有別的觀察 α 的途徑」。它的機械證據是
+**一支試圖繞過比較器的實作連型別檢查都過不了**——那不需要任何正確性證明。
+
+| 層 | 內容 | 需要完整排序嗎 | 承諾 |
+|---|---|---|---|
+| **(a)** | 面 3 的鑑別內容：`Cheats/Opt08_Cheat_BypassWithInt` 直接寫 `x ≤ y` → 型別錯誤；`decide (ord.le x y)` → 無 `Decidable` 實例 | **否** | **必做** |
+| (b) | rubric 可被實作（全多型插入排序住得進去） | 是 | 盡力；卡住就退到 (c) |
+| (c) | 最小可住者（三元素／只有比較器接線的例子） | 否 | (b) 失敗時的合格交付 |
+
+**(b) 失敗退到 (c) 不算妥協**——面 3 的論點由 (a) 完整承擔，
+(b) 證的是另一件事（rubric 不是空的）。
+
+風險來源已知：`Sorted` 換成 `ord.le` 之後，grind 對 `Int` 的原生序推理全部失效，
+`trans` / `total` / `antisymm` 都要手動餵（U3，PROGRESS 已標高風險）。
+
+**先講定，就不會在那裡卡兩輪才回報。**
 
 ## R11 追溯複查：現有「已淘汰」紀錄
 
