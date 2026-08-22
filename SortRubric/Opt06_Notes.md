@@ -15,30 +15,78 @@
 指引 v2 §1.3 把 `ResetToOld` 列在「預定死於第 06 次」。實測它沒死，
 而且證明只花 12 秒。它現在叫 `Unresolved_ResetToOld.lean`。
 
-## 2. ★ 四格表（全部有機械證據）
+**但這不代表 M1 沒有內容**——見 §2 的第三欄。
 
-| | 歸到**起點以下**（`ticks := 0`） | 歸到**起點**（`ticks := t_in`） |
+## 2. ★ 三分法與完整的四格表
+
+所有針對計數器的攻擊，取得「一個比較小的 `Ticks`」只有三種手段：
+
+| 手段 | 例子 | 被什麼擋 |
 |---|---|---|
-| `Nat`，無守衛 | ✅ 通過 | ✅ 通過 |
-| `Nat` + `ensures ticksOld ≤ ticks` | ❌ `⊢ ticksOld ≤ 0` | ✅ 通過 |
-| 抽象 `Ticks` | ❌ **型別錯誤** ×4 | ✅ 通過（完整插入排序） |
+| **造** | `ForgeZero`、`ForgeMidpoint` | ✅ **M1（`private mk`）** |
+| **複製** | `ResetToOld`、`CopyThenRebump`、`FakeCounter` | ❌ 開著 |
+| **丟棄** | `DiscardCmpTicks`（第 07 次新增） | ❌ 開著 |
 
-證據位置：上兩列在 `Cheats/Opt06_Cheat_ForgeZero.lean`，
-下一列與整張表在 `Cheats/Unresolved_ResetToOld.lean` §1、§3。
+**M1 恰好覆蓋三分之一。**
 
-由這張表得到的精確陳述：
+### 四格表（第三欄是後補的，而且它是關鍵）
 
-> **抽象 `Ticks` ≡ `ensures ticksOld.val ≤ ticks.val`。**
-> 兩者擋住的集合一模一樣：都只保證終值不低於起點。
+| | `ticks := 0` | `ticks := t_in` | `ticks := ⟨t_in.val + 14⟩` |
+|---|---|---|---|
+| `Nat`，無守衛 | ✅ | ✅ | ✅ |
+| `Nat` + `ensures ticksOld ≤ ticks` | ❌ `⊢ ticksOld ≤ 0` | ✅ | ✅ **通過（單調！）** |
+| 抽象 `Ticks` | ❌ 型別錯誤 ×4 | ✅（完整插入排序） | ❌ **型別錯誤 ×3** |
+
+證據：`Cheats/Opt06_Cheat_ForgeZero.lean`（第一欄）、
+`Cheats/Unresolved_ResetToOld.lean`（第二欄）、
+`Cheats/Opt06_Cheat_ForgeMidpoint.lean`（★ 第三欄）。
+
+### ⚠ 我第一版的結論抽樣不足
+
+第一版只測了前兩欄，得到「抽象 `Ticks` ≡ `ensures ticksOld ≤ ticks`」。
+**那是假等價。** 第三欄把兩列分開了：
+
+「老實計費 28 次、報 `t_in + 14`」是**單調**的，所以
+
+- `ensures ticksOld ≤ ticks` 抓不到（`ticksOld ≤ ticksOld + 14` 成立）
+- 任何 `≤` 形狀的上界／下界都抓不到
+- **只有「你造不出那個值」抓得到**
+
+而且它比 `ResetToOld` 危險：`ResetToOld` 只能報 `t_in`，所以只認證得了
+`f _ = 0`（一眼就看得出荒謬）；`ForgeMidpoint` 報 `t_in + k`，k 任選，
+**可以報一個看起來合理的數字**，人工 code review 也不容易起疑。
+
+### 正確的陳述要分兩層
+
+> 以「**可寫出的程式**」衡量：抽象 `Ticks` **嚴格強於**那條後條件。
+> 以「**可達成的行為**」衡量：兩者**相同**——而這個塌陷是「複製」造成的。
+
+第二層的機械證據是 `Cheats/Unresolved_CopyThenRebump.lean`：
+
+```lean
+let mut fake := t_in     -- 從複製品重來
+… 只 bump 14 次 …
+ticks := fake            -- 報 14
+```
+
+全程只用公開 API（`val` 讀、`bump` 推進），達成與 `ForgeMidpoint`
+**完全相同**的可觀察行為。
+
+**同樣的行為，一支寫不出來、一支寫得出來。**
+
+⇒ **M1 的保證不是不存在，是被面 2 的洞遮住了。
+面 2 一旦補上，M1 立刻變成一條實質的保證。**
+
+這也是第 09 次那條不可能性定理的前半段——M1 是它的一個前提，
+而且是**已經到手**的那個前提。
 
 ### 指引 §5.1.1 的說法要修正
 
 指引說 `ensures ticksOld ≤ ticks`「**從來不是在擋歸零**，它擋的是
-『減到起點以下』」。前半句不精確：**「歸零」和「減到起點以下」在
-`ticksOld = 0` 以外的所有情況下是同一件事**，而那條後條件確實擋得住它
-（第二列左格是紅的）。
+『減到起點以下』」。在 rubric 層（spec 對 `∀ t` 量化）**說反了**：
+`ticks := 0` 的目標是 `⊢ ticksOld ≤ 0`，證不出來——**它擋得住歸零**。
 
-真正該說的是：**它擋不住的是「歸到起點」，而抽象 `Ticks` 也擋不住。**
+它擋不住的是「歸到**起點**」與「報一個**單調的中間值**」。
 
 ## 3. ★★ `ResetToOld` 與 `FakeCounter` 是同一支作弊
 
@@ -68,6 +116,10 @@ let mut fake := ticks;  … fake  := fake.bump  …
 1. **kill 表的第一列「型別錯誤」**：`ForgeZero`——「無視呼叫端的起點，
    直接報 0」。它在第 05 次是綠的（相對界限對 `ticks = 0` 恆成立），
    在第 06 次連 elaboration 都過不了。四條偽造路徑全部釘住逐字錯誤。
+1a. ★ **`ForgeMidpoint`**——老實計費 28 次、造一個中間值報 14。
+   它是**單調的**，所以沒有任何 `≤` 形狀的後條件抓得到它。
+   **這一支才是 M1 不可取代的證據**：它證明「造不出來」關掉了一整類
+   後條件關不掉的作弊。
 2. **`ticksOld ≤ ticks` 變成結構性質**：不需要有人寫下來、不需要有人證。
    「忘記加一條 `ensures`」這個失效模式消失了。這一點後條件版做不到——
    不是強度差別，是**失效模式**差別。

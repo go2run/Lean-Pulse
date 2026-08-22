@@ -131,14 +131,16 @@ Priv/C.lean:5:34: error: invalid {...} notation, constructor for `Ticks` is mark
 
 ### G.2 實測
 
-| | 歸到**起點以下**（`ticks := 0`） | 歸到**起點**（`ticks := t_in`） |
-|---|---|---|
-| `Nat`，無守衛 | ✅ 通過 | ✅ 通過 |
-| `Nat` + `ensures ticksOld ≤ ticks` | ❌ `⊢ ticksOld ≤ 0` | ✅ 通過 |
-| 抽象 `Ticks` | ❌ **型別錯誤** ×4 | ✅ 通過（完整插入排序，12 秒） |
+| | `ticks := 0` | `ticks := t_in` | `ticks := ⟨t_in.val + 14⟩` |
+|---|---|---|---|
+| `Nat`，無守衛 | ✅ | ✅ | ✅ |
+| `Nat` + `ensures ticksOld ≤ ticks` | ❌ `⊢ ticksOld ≤ 0` | ✅ | ✅ **通過（單調！）** |
+| 抽象 `Ticks` | ❌ **型別錯誤** ×4 | ✅（完整插入排序，12 秒） | ❌ **型別錯誤** ×3 |
 
-證據：`Cheats/Opt06_Cheat_ForgeZero.lean`（上兩列）、
-`Cheats/Unresolved_ResetToOld.lean`（下一列 + 全表）。
+證據：`Cheats/Opt06_Cheat_ForgeZero.lean`（第一欄）、
+`Cheats/Unresolved_ResetToOld.lean`（第二欄）、
+`Cheats/Opt06_Cheat_ForgeMidpoint.lean`（第三欄）、
+`Cheats/Unresolved_CopyThenRebump.lean`（第三欄的「複製繞道」）。
 
 ### G.3 修正
 
@@ -147,13 +149,26 @@ Priv/C.lean:5:34: error: invalid {...} notation, constructor for `Ticks` is mark
    指引沒有注意到 **`ResetToOld` 本身就是一個複製**。
 
 2. **§5.1.1 的措辭要反過來。** `ensures ticksOld ≤ ticks` 確實擋得住「歸零」
-   （在 `ticksOld ≠ 0` 時，歸零就是減到起點以下）。它擋不住的是「歸到**起點**」。
-   而抽象 `Ticks` 擋住的集合**與它一模一樣**：
+   （在 `ticksOld ≠ 0` 時，歸零就是減到起點以下）。它擋不住的是「歸到**起點**」，
+   以及「報一個**單調的中間值**」。
 
-   > 抽象 `Ticks` ≡ `ensures ticksOld.val ≤ ticks.val`
+   ⚠ **本條的第一版寫成「抽象 `Ticks` ≡ `ensures ticksOld.val ≤ ticks.val`」，
+   那是抽樣不足造成的假等價**——當時只測了前兩欄。第三欄把兩者分開：
+   `ForgeMidpoint`（老實計費 28 次、報 `t_in + 14`）是單調的，
+   任何 `≤` 形狀的後條件都抓不到，只有「造不出那個值」抓得到。
 
-3. **第 06 次仍然有一列型別錯誤的 kill**，但那一支是新的：
-   `ForgeZero`（「無視呼叫端的起點，直接報 0」）。它在第 05 次是綠的。
+   正確的陳述分兩層：
+
+   > 以「**可寫出的程式**」衡量：抽象 `Ticks` **嚴格強於**那條後條件。
+   > 以「**可達成的行為**」衡量：兩者**相同**——塌陷是「複製」造成的。
+
+   ⇒ **M1 的保證不是不存在，是被面 2 的洞遮住了。**
+   機械證據是 `ForgeMidpoint`（型別錯誤）與 `CopyThenRebump`（通過）這一對：
+   **同樣的可觀察行為，一支寫不出來、一支寫得出來。**
+
+3. **第 06 次仍然有型別錯誤的 kill**，但那兩支是新的：
+   `ForgeZero`（「無視起點直接報 0」）與 ★ `ForgeMidpoint`（「報一個單調的中間值」）。
+   兩支在第 05 次都是綠的。**後者才是 M1 不可取代的證據。**
 
 4. **`ResetToOld` 與第 09 次的 `FakeCounter` 是同一支作弊的兩種穿法**
    （複製後放回去 / 複製後拿去記帳）。

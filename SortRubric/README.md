@@ -74,14 +74,34 @@ let t_in := ticks            -- 複製一個值，不需要建構子
 ticks := t_in                -- 把複製品放回去
 ```
 
-`private mk` 管的是「**造**」，管不到「**複製**」。而這兩支作弊做的是同一件事：
+`private mk` 管的是「**造**」，管不到「**複製**」。三分法：
 
-| 作弊 | 動作 |
-|---|---|
-| `ResetToOld` | 複製 → 對本尊計費 → 把複製品放回去 |
-| `FakeCounter` | 複製 → 對複製品計費 → 從不碰本尊 |
+| 手段 | 例子 | 被什麼擋 |
+|---|---|---|
+| **造** | `ForgeZero`、`ForgeMidpoint` | ✅ **M1（`private mk`）** |
+| **複製** | `ResetToOld`、`CopyThenRebump`、`FakeCounter` | ❌ 開著 |
+| **丟棄** | `DiscardCmpTicks` | ❌ 開著 |
 
-⇒ **M1（單調計數器）與 M2 面 2（計數器身分）不是兩個問題，是同一個問題。**
+⇒ **M1 恰好覆蓋三分之一；M2 面 2（計數器身分）管的是另外三分之二。**
+
+### 但 M1 不是多餘的 —— 一對作弊講清楚這件事
+
+| | 手段 | 可觀察行為 | 結果 |
+|---|---|---|---|
+| `Opt06_Cheat_ForgeMidpoint` | **造** `⟨t_in.val + 14⟩` | 做 28 次、報 14、全程單調 | ❌ **型別錯誤** |
+| `Unresolved_CopyThenRebump` | **複製** 後重新 bump 14 次 | **完全相同** | ✅ **通過** |
+
+`ForgeMidpoint` 是**單調**的，所以 `ensures ticksOld ≤ ticks` 抓不到它，
+任何 `≤` 形狀的界限也抓不到——**只有「你造不出那個值」抓得到**。
+而且它比 `ResetToOld` 危險：報 `t_in + k`（k 任選）可以認證**任何** `f`，
+還能報一個看起來合理的數字，人工 review 也不容易起疑。
+
+⇒ 精確的陳述分兩層：
+
+> 以「**可寫出的程式**」衡量：抽象 `Ticks` **嚴格強於** `ensures ticksOld ≤ ticks`。
+> 以「**可達成的行為**」衡量：兩者**相同**——塌陷是「複製」造成的。
+>
+> **M1 的保證不是不存在，是被面 2 的洞遮住了。**
 
 最尖銳的形式：`Unresolved_ResetToOld.lean` 裡那支作弊**住得進
 `ArraySort (fun _ => 0)`**——第 06 次的 rubric 承認一支「零次比較的比較排序」。
@@ -259,9 +279,11 @@ Cheats/
 | `Opt03_Cheat_LaunderPrecondition` | —（測我們自己的規則） | `triple_cons` 方向性 | `⊢ True ≤ (have arr := a; 1 ≤ arr.size)` |
 | `Opt05_Cheat_NoCompose` | —（示範不可用，非不誠實） | 絕對界限的隱含前條件 | `⊢ i_2 = 0` ←「第一次呼叫花掉的計數要等於 0」 |
 | `Opt06_Cheat_ForgeZero` | Opt06 | ★ **型別**（`Ticks` 的 `private mk`） | `Invalid ⟨...⟩ notation: Constructor for Ticks is marked as private`（四條路徑） |
+| `Opt06_Cheat_ForgeMidpoint` | Opt06 | ★ **型別**（同上，但**後條件抓不到**） | 同上（三條路徑）。★ 單調偽造：`ensures ticksOld ≤ ticks` 通過，型別擋下 |
 | `Opt07_Cheat_LyingComparator` | Opt07 | `InstrOrder.charged` / `.correct` | `⊢ (decide (x ≤ y), t).2.val = t.val + 1`；`⊢ (true, t.bump).1 = true ↔ x ≤ y`（⚠ **證明失敗，非型別錯誤**） |
 | `Unresolved_ResetToOld` | — | — | —（它**通過**，而且住得進 `ArraySort (fun _ => 0)`） |
 | `Unresolved_DiscardCmpTicks` | — | — | —（它**通過**：真的經過誠實比較器 28 次，報 0） |
+| `Unresolved_CopyThenRebump` | — | — | —（它**通過**：與 `ForgeMidpoint` 同行為，改用複製達成） |
 | `Unresolved_BypassWithInt` | —（預定 Opt08） | — | —（它**通過**，這是第 08 次存在的理由） |
 | `Unresolved_FakeCounter` | — | — | —（它**通過**） |
 | `Unresolved_FakeCounterPadded` | — | — | —（它**通過**） |

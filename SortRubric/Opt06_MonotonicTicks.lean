@@ -9,6 +9,12 @@
       （`Cheats/Opt06_Cheat_ForgeZero.lean` —— ★ **型別錯誤**，
         kill 表的第一列「寫不出來」而不是「證不出來」）
 
+  這一步同時淘汰的第二支（★ 更重要）:
+      `Opt06_Cheat_ForgeMidpoint` —— 老實計費 28 次，然後**造**一個
+      中間值報 14。它是**單調的**，所以 `ensures ticksOld ≤ ticks`
+      抓不到；擋住它的純粹是「你造不出那個 `Ticks`」。
+      ⇒ 這一支證明 M1 **嚴格強於**那條後條件（就可寫出的程式而言）。
+
   ★★ 這一步**沒有**淘汰指引預期的那一支:
       「老實計費，最後 `ticks := ticksOld`」（`ResetToOld`）
       **仍然活著**，見 `Cheats/Unresolved_ResetToOld.lean`。
@@ -155,30 +161,53 @@ theorem ArraySort.compose_two (f : Nat → Nat) (S : ArraySort f)
     rw [← hsz] at ht
     omega
 
-/-! ## 4. ★ 這一步真正買到什麼——四格表
+/-! ## 4. ★ 這一步真正買到什麼——三分法
 
-指引 §5.1.1 要求先示範「顯然的補法」`ensures ticksOld ≤ ticks` 為什麼無效，
-再示範抽象 `Ticks` 有效。**實測的答案是：兩者一樣有效，也一樣無效。**
+所有針對計數器的攻擊，取得「一個比較小的 `Ticks`」只有三種手段：
 
-| | 歸到**起點以下**（`ticks := 0`） | 歸到**起點**（`ticks := t_in`） |
+| 手段 | 例子 | 被什麼擋 |
 |---|---|---|
-| `Nat`，無守衛 | ✅ 通過 | ✅ 通過 |
-| `Nat` + `ensures ticksOld ≤ ticks` | ❌ 證不出來（`⊢ ticksOld ≤ 0`） | ✅ 通過 |
-| 抽象 `Ticks` | ❌ **型別錯誤**（造不出 `Ticks`） | ✅ 通過 |
+| **造**（憑空生一個值） | `ticks := ⟨0⟩`、`ticks := ⟨t_in.val + 14⟩` | ✅ **M1（`private mk`）** |
+| **複製**（留一份舊的） | `ResetToOld`、`CopyThenRebump`、`FakeCounter` | ❌ 開著 |
+| **丟棄**（不採用回傳的） | `DiscardCmpTicks`（第 07 次新增） | ❌ 開著 |
 
-四格全部有機械證據，見 `Cheats/Opt06_Cheat_ForgeZero.lean`（上兩列）
-與 `Cheats/Unresolved_ResetToOld.lean`（下一列與整張表）。
+**M1 恰好覆蓋三分之一。**
 
-所以精確的陳述是：
+### 完整的四格表
 
-> **抽象 `Ticks` ≡ `ensures ticksOld.val ≤ ticks.val`。**
-> 兩者擋住的集合**一模一樣**：都只保證終值不低於起點。
-> 都不保證中間過程單調（複製一份、bump 五次、放回去，中間就不單調），
-> 也都不保證終值反映真正的比較次數。
+指引 §5.1.1 要求先示範「顯然的補法」`ensures ticksOld ≤ ticks` 為什麼無效。
+實測要三欄才講得清楚：
+
+| | `ticks := 0` | `ticks := t_in` | `ticks := ⟨t_in.val + 14⟩` |
+|---|---|---|---|
+| `Nat`，無守衛 | ✅ 通過 | ✅ 通過 | ✅ 通過 |
+| `Nat` + `ensures ticksOld ≤ ticks` | ❌ `⊢ ticksOld ≤ 0` | ✅ 通過 | ✅ **通過（單調！）** |
+| 抽象 `Ticks` | ❌ **型別錯誤** | ✅ 通過 | ❌ **型別錯誤** |
+
+證據位置：第一欄在 `Cheats/Opt06_Cheat_ForgeZero.lean`，
+第二欄在 `Cheats/Unresolved_ResetToOld.lean`，
+★ 第三欄在 `Cheats/Opt06_Cheat_ForgeMidpoint.lean`。
+
+**第三欄是關鍵，因為它把第二列與第三列分開了。**
+「老實計費 28 次、報 `t_in + 14`」是單調的，所以任何 `≤` 形狀的後條件
+都抓不到；擋住它的只有「你造不出那個 `Ticks`」。
+
+⇒ 精確的陳述要分兩層：
+
+> 以「**可寫出的程式**」衡量：抽象 `Ticks` **嚴格強於** `ensures ticksOld ≤ ticks`。
+> 以「**可達成的行為**」衡量：兩者**相同**——而這個塌陷是「複製」造成的。
+
+第二層的機械證據是 `Cheats/Unresolved_CopyThenRebump.lean`：
+`let mut fake := t_in; 重新 bump 14 次; ticks := fake` 用**公開 API** 就寫得出來，
+達成與 `ForgeMidpoint` 完全相同的可觀察行為。
+
+**同樣的行為，一支寫不出來、一支寫得出來。**
+
+⇒ **M1 的保證不是不存在，是被面 2 的洞遮住了。面 2 一旦補上，兩者立刻分開。**
 
 ### 那型別版還有沒有比後條件版強的地方？
 
-有一項，而且對 rubric 而言是實質的：
+除了上面那條（單調偽造），還有一項對 rubric 而言是實質的：
 
 **它是結構性的，不是證明義務。** `ensures ticksOld ≤ ticks` 要有人寫下來、
 有人證出來；漏寫就沒有。抽象 `Ticks` 對**任何**拿到 `Ticks` 參數的方法都成立，
