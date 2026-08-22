@@ -103,7 +103,7 @@ ticks := t_in                -- 把複製品放回去
 | 05 | `Opt05_TicksRelative` | 改成 `ticks ≤ ticksOld + f n` | **（不防作弊）** 遞迴界限疊不起來 | ✅ | 低 |
 | 05.5 | `Opt05b_Composition` | rubric 層（非 method 層）的界限可組合 | **（不防作弊）** 補驗，非新的一刀 | ✅ | 低 |
 | 06 | `Opt06_MonotonicTicks` | M1 抽象 `Ticks`（`private mk`） | 無視呼叫端起點，直接報 0 | ✅ | 中 |
-| 07 | `Opt07_InstrOrder` | M2 面 1：比較器必計費、不說謊 | 不計費／亂回答的比較器 | ⬜ | 中 |
+| 07 | `Opt07_InstrOrder` | M2 面 1：比較器必計費、不說謊 | 不計費／亂回答的比較器 | ✅ | 中 |
 | 08 | `Opt08_AbstractElem` | M2 面 3：`SpecOrder`(Prop) + 抽象 α | 用 `Int` 直接 `x < y` 繞過比較器 | ⬜ | **高** |
 | 09 | `Opt09_SortM` | M2 面 2：計數器身分 | `let mut fake := ticks` 分身 | ⬜ | **必要，且已知受限**※ |
 | 10 | `Opt10_Audit` | D 軸：`#print axioms` + SPOTs | `sorry` 掉整個 spec | ⬜ | 低 |
@@ -259,7 +259,10 @@ Cheats/
 | `Opt03_Cheat_LaunderPrecondition` | —（測我們自己的規則） | `triple_cons` 方向性 | `⊢ True ≤ (have arr := a; 1 ≤ arr.size)` |
 | `Opt05_Cheat_NoCompose` | —（示範不可用，非不誠實） | 絕對界限的隱含前條件 | `⊢ i_2 = 0` ←「第一次呼叫花掉的計數要等於 0」 |
 | `Opt06_Cheat_ForgeZero` | Opt06 | ★ **型別**（`Ticks` 的 `private mk`） | `Invalid ⟨...⟩ notation: Constructor for Ticks is marked as private`（四條路徑） |
+| `Opt07_Cheat_LyingComparator` | Opt07 | `InstrOrder.charged` / `.correct` | `⊢ (decide (x ≤ y), t).2.val = t.val + 1`；`⊢ (true, t.bump).1 = true ↔ x ≤ y`（⚠ **證明失敗，非型別錯誤**） |
 | `Unresolved_ResetToOld` | — | — | —（它**通過**，而且住得進 `ArraySort (fun _ => 0)`） |
+| `Unresolved_DiscardCmpTicks` | — | — | —（它**通過**：真的經過誠實比較器 28 次，報 0） |
+| `Unresolved_BypassWithInt` | —（預定 Opt08） | — | —（它**通過**，這是第 08 次存在的理由） |
 | `Unresolved_FakeCounter` | — | — | —（它**通過**） |
 | `Unresolved_FakeCounterPadded` | — | — | —（它**通過**） |
 | `Upstream_Contamination{A,B,Control}` | —（上游 bug 重現 + 控制組） | — | — |
