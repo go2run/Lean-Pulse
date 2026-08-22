@@ -42,13 +42,14 @@
 
 | 引理 | 宣告於 | 為什麼保持 local |
 |---|---|---|
+| `Ticks.val_bump` | `Opt06_MonotonicTicks` | ★ 用 `attribute [local grind]`。`loom_solve` **不吃引理參數**（`Loom/CaseStudies/Tactic.lean:65`），所以 `grind [Ticks.val_bump]` 這條路走不通；`local` 屬性有全域屬性的效力，但**不外洩給 importer**，從結構上消掉第 04 次 `tick_step` 那一類事故。**這應該是 07/08 的預設做法。** |
 | `SameElements.size_eq` | `Opt05b_Composition` | 只在組合定理裡用到 1 處，遠低於 P1 的 ≥3 門檻。它是 `Multiset.card` 的 congruence，掛上去會讓 grind 對每個 `SameElements` 假設都多生一條 size 等式 |
 
 ## 預留：後續步驟預期會來申請的
 
 | 步驟 | 預期屬性 | 為什麼 | 決定 |
 |---|---|---|---|
-| 06 | `Ticks.val_bump` | `Ticks` 是 structure，`loom_solve` 對它沒有原生支援，每條關於 `.val` 的推理都要餵它 | **先試 local**（`grind [Ticks.val_bump]`）。真的必須全域才回來加列 |
-| 07 | `InstrOrder.correct` / `InstrOrder.charged` | 純函式版的 `cmp` 規格是**等式**，grind 可直接當 rewrite | 同上，先 local |
+| ~~06~~ | ~~`Ticks.val_bump`~~ | — | ✅ **已解決，未動用全域**：`attribute [local grind]`，見上表 |
+| 07 | `InstrOrder.correct` / `InstrOrder.charged` | 純函式版的 `cmp` 規格是**等式**，grind 可直接當 rewrite | 用 `attribute [local grind]`（第 06 次已驗證這條路可行） |
 | 08 | `SpecOrder.trans` / `.total` | `grind` 對抽象序沒有內建推理，全部要手餵 | ⚠ 高風險：`trans` 是**傳遞律**，掛全域 grind 容易爆搜尋空間。預設 local，且優先寫成手動 `apply ord.trans` 鏈 |
 | 08 | `[Inhabited α]`（typeclass，非屬性） | `a[i]!` 需要它；真正的阻塞點是 `Array.multiset_swap [Inhabited α]` | 已在 README 的 typeclass 預算表論證：`Inhabited` **不提供任何比較能力**，面 3 不受影響 |

@@ -63,6 +63,32 @@ Velvet 的 `VelvetM = NonDetT DivM` 是純值上的不確定性 + 發散，沒�
 → 檔案：[`Cheats/Unresolved_FakeCounter.lean`](Cheats/Unresolved_FakeCounter.lean)
 → 為什麼不叫 `Opt09_Cheat_*`：**沒有任何一步淘汰得了它**，照慣例取名等於在檔名裡寫一句沒驗證過的宣稱。
 
+### ★ 第 06 次的發現：這個洞不是第 09 次才出現的
+
+第 06 次把計數器換成抽象型別 `Ticks`（`private mk`）之後，本來預期會殺掉
+「老實計費，最後 `ticks := ticksOld`」。**實測沒有。**
+
+```lean
+let t_in := ticks            -- 複製一個值，不需要建構子
+… ticks := ticks.bump …      -- 老實計費 n(n−1)/2 次
+ticks := t_in                -- 把複製品放回去
+```
+
+`private mk` 管的是「**造**」，管不到「**複製**」。而這兩支作弊做的是同一件事：
+
+| 作弊 | 動作 |
+|---|---|
+| `ResetToOld` | 複製 → 對本尊計費 → 把複製品放回去 |
+| `FakeCounter` | 複製 → 對複製品計費 → 從不碰本尊 |
+
+⇒ **M1（單調計數器）與 M2 面 2（計數器身分）不是兩個問題，是同一個問題。**
+
+最尖銳的形式：`Unresolved_ResetToOld.lean` 裡那支作弊**住得進
+`ArraySort (fun _ => 0)`**——第 06 次的 rubric 承認一支「零次比較的比較排序」。
+
+→ 檔案：[`Cheats/Unresolved_ResetToOld.lean`](Cheats/Unresolved_ResetToOld.lean)
+→ 指引勘誤：[`Opt00_GUIDE_ERRATA.md`](Opt00_GUIDE_ERRATA.md) §G
+
 ---
 
 ## 十步總表
@@ -76,7 +102,7 @@ Velvet 的 `VelvetM = NonDetT DivM` 是純值上的不確定性 + 發散，沒�
 | 04 | `Opt04_TicksAbsolute` | `ticks ≤ f n`；`f` 升格成 rubric 參數 | bogosort；一種複雜度一份規格 | ✅ | 低 |
 | 05 | `Opt05_TicksRelative` | 改成 `ticks ≤ ticksOld + f n` | **（不防作弊）** 遞迴界限疊不起來 | ✅ | 低 |
 | 05.5 | `Opt05b_Composition` | rubric 層（非 method 層）的界限可組合 | **（不防作弊）** 補驗，非新的一刀 | ✅ | 低 |
-| 06 | `Opt06_MonotonicTicks` | M1 抽象 `Ticks`（`private mk`） | 老實計費，最後 `ticks := ticksOld` | ⬜ | 中 |
+| 06 | `Opt06_MonotonicTicks` | M1 抽象 `Ticks`（`private mk`） | 無視呼叫端起點，直接報 0 | ✅ | 中 |
 | 07 | `Opt07_InstrOrder` | M2 面 1：比較器必計費、不說謊 | 不計費／亂回答的比較器 | ⬜ | 中 |
 | 08 | `Opt08_AbstractElem` | M2 面 3：`SpecOrder`(Prop) + 抽象 α | 用 `Int` 直接 `x < y` 繞過比較器 | ⬜ | **高** |
 | 09 | `Opt09_SortM` | M2 面 2：計數器身分 | `let mut fake := ticks` 分身 | ⬜ | **必要，且已知受限**※ |
@@ -192,6 +218,7 @@ ensures Sorted arr 沒有 @[grind]
 | [`Opt00_Recon.md`](Opt00_Recon.md) | 環境勘查報告：真實 API 逐字摘錄、四個問題的實測答案、已知環境債 |
 | [`Opt00_GUIDE_ERRATA.md`](Opt00_GUIDE_ERRATA.md) | 指引勘誤表，可併回專案端指引 |
 | [`PROGRESS.md`](PROGRESS.md) | 進度表 |
+| [`strip_comments.py`](strip_comments.py) | 剝掉 Lean 註解，供 `check_isolation.sh` 的 R16 段只看程式碼 |
 | [`AttributeBudget.md`](AttributeBudget.md) | **全域 `@[grind]` / `@[simp]` 預算表（R15 的正本）** |
 | [`UPSTREAM_REPORT.md`](UPSTREAM_REPORT.md) | 上游回報：失敗的 `prove_correct` 靜默注入 `sorry`（一種模式、兩個實例、一組控制組） |
 | [`check_build.sh`](check_build.sh) | 每步驗收（R4） |
@@ -231,9 +258,11 @@ Cheats/
 | `Opt03_Cheat_ExtraPrecondition` | Opt03 | `spec` 的**前條件形狀** | `Type mismatch`：`{1 ≤ arr.size}` vs `{True}` |
 | `Opt03_Cheat_LaunderPrecondition` | —（測我們自己的規則） | `triple_cons` 方向性 | `⊢ True ≤ (have arr := a; 1 ≤ arr.size)` |
 | `Opt05_Cheat_NoCompose` | —（示範不可用，非不誠實） | 絕對界限的隱含前條件 | `⊢ i_2 = 0` ←「第一次呼叫花掉的計數要等於 0」 |
+| `Opt06_Cheat_ForgeZero` | Opt06 | ★ **型別**（`Ticks` 的 `private mk`） | `Invalid ⟨...⟩ notation: Constructor for Ticks is marked as private`（四條路徑） |
+| `Unresolved_ResetToOld` | — | — | —（它**通過**，而且住得進 `ArraySort (fun _ => 0)`） |
 | `Unresolved_FakeCounter` | — | — | —（它**通過**） |
 | `Unresolved_FakeCounterPadded` | — | — | —（它**通過**） |
-| `Upstream_Contamination{A,B}` | —（上游 bug 重現） | — | — |
+| `Upstream_Contamination{A,B,Control}` | —（上游 bug 重現 + 控制組） | — | — |
 
 **第四欄比錯誤訊息好讀，也比錯誤訊息穩定**——訊息格式會隨版本變，goal 不會。
 而且它自己說明成因：`Identity` 是四支裡唯一目標只跟**輸入**有關的，因為它根本沒產生新東西。

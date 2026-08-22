@@ -116,3 +116,67 @@ Priv/C.lean:4:34: error: invalid {...} notation, constructor for `Ticks` is mark
 Priv/C.lean:5:34: error: invalid {...} notation, constructor for `Ticks` is marked as private
 ```
 （`C.lean` 的三行分別是 `⟨0⟩`、`{ val := 0 }`、`{ t with val := 0 }`）
+
+---
+
+## §G 第 06 次：`private mk` 殺的不是指引預期的那一支（v2 §1.3／§5.1.1／§5.1.6）
+
+**這一條與前面六類不同**：不是措辭或 API 細節，是一個**實質的技術判斷需要修正**。
+
+### G.1 指引的主張
+
+- v2 §1.3「還活著的作弊」表：`ResetToOld`（老實計費，最後 `ticks := ticksOld`）→ **預定死於第 06 次**
+- v2 §5.1.1：`ensures ticksOld ≤ ticks`「**從來不是在擋歸零**，它擋的是『減到起點以下』」
+- v2 §5.1.6：第 06 次「買到 kill 表第一列型別錯誤」，「買不到複製」
+
+### G.2 實測
+
+| | 歸到**起點以下**（`ticks := 0`） | 歸到**起點**（`ticks := t_in`） |
+|---|---|---|
+| `Nat`，無守衛 | ✅ 通過 | ✅ 通過 |
+| `Nat` + `ensures ticksOld ≤ ticks` | ❌ `⊢ ticksOld ≤ 0` | ✅ 通過 |
+| 抽象 `Ticks` | ❌ **型別錯誤** ×4 | ✅ 通過（完整插入排序，12 秒） |
+
+證據：`Cheats/Opt06_Cheat_ForgeZero.lean`（上兩列）、
+`Cheats/Unresolved_ResetToOld.lean`（下一列 + 全表）。
+
+### G.3 修正
+
+1. **`ResetToOld` 不死於第 06 次。** 它不需要**造**一個 `Ticks`，只需要**複製**一個：
+   `let t_in := ticks; …; ticks := t_in`。而 §5.1.6 自己就寫了「買不到複製」——
+   指引沒有注意到 **`ResetToOld` 本身就是一個複製**。
+
+2. **§5.1.1 的措辭要反過來。** `ensures ticksOld ≤ ticks` 確實擋得住「歸零」
+   （在 `ticksOld ≠ 0` 時，歸零就是減到起點以下）。它擋不住的是「歸到**起點**」。
+   而抽象 `Ticks` 擋住的集合**與它一模一樣**：
+
+   > 抽象 `Ticks` ≡ `ensures ticksOld.val ≤ ticks.val`
+
+3. **第 06 次仍然有一列型別錯誤的 kill**，但那一支是新的：
+   `ForgeZero`（「無視呼叫端的起點，直接報 0」）。它在第 05 次是綠的。
+
+4. **`ResetToOld` 與第 09 次的 `FakeCounter` 是同一支作弊的兩種穿法**
+   （複製後放回去 / 複製後拿去記帳）。
+   ⇒ **面 2 的缺口從第 06 次就在了，不是第 09 次才出現。**
+
+### G.4 §5.1.5 的自動化預期也可以放寬
+
+指引預期 `Ticks` 會逼出全域 `@[grind]`（R15 預算表 + 全量 rebuild）。
+實測有第三條路：**`attribute [local grind] Ticks.val_bump`**。
+`local` 不外洩給 importer，從結構上消掉第 04 次 `tick_step` 那一類事故。
+⇒ 依 P1 這算 local，R15 不觸發。建議把它寫成 07/08 的預設做法。
+
+### G.5 一個指引沒提、但一定會踩到的坑
+
+`VelvetM.extract` 需要 `[Inhabited α]`，α 是整個回傳 tuple。
+所以 `#eval (sortWithTicks …).extract` 會要求 `Inhabited Ticks`——
+**那正是 §5.1.3 禁止清單的第一條**。
+
+不知道的話，很容易為了讓 `#eval` 跑起來而 `deriving Inhabited`，**M1 就靜默失效了**。
+正解是先在 `VelvetM` 裡 map 成 `Nat` 再 `.extract`：
+
+```lean
+#eval (do let r ← sortWithTicks … ; pure r.2.2.val : VelvetM Nat).extract
+```
+
+建議把這一段加進 §5.1.3 的禁止清單旁邊，因為它是那條禁令**最可能的真實觸發路徑**。

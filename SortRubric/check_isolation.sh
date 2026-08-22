@@ -51,7 +51,10 @@ while IFS= read -r f; do
       "$ROOT"/SortRubric/*)      tag="SortRubric" ;;
       *"/toolchains/"*|*"/src/lean/"*) tag="toolchain" ;;
       "$ROOT"/*)                 tag="✗ 專案根目錄"; FAIL=1 ;;
-      *)                         tag="toolchain" ;;
+      # ★ fail-closed（R16）：認不出來的位置一律當失敗。
+      # 舊版這裡是 `tag="toolchain"`，也就是把未知一律當成安全——
+      # 那讓整個歸納法有一個沒人看守的出口。
+      *)                         tag="✗ 未知位置"; FAIL=1 ;;
     esac
     echo "      [$tag] ${d#"$ROOT"/}"
   done <<< "$deps"
@@ -93,6 +96,40 @@ if [ -n "$cheat_importers" ]; then
 else
   n_cheats=$(find SortRubric/Cheats -name '*.lean' 2>/dev/null | wc -l)
   echo "  ✓ 無。Cheats/ 的 $n_cheats 個模組都是 import 圖的葉節點，sorryAx 不會外洩"
+fi
+
+echo
+echo "=== [R16] Ticks 的公開起點 mkForTesting 出現在哪些檔？（fail-closed 白名單）==="
+# 為什麼這個檢查是**完整**的列舉：
+#   Ticks 的建構子是 private（作用域 = Opt06_Ticks.lean 這個模組），
+#   所以模組外每一個造出 Ticks 的地方都必須寫出 `mkForTesting` 這個字。
+#   ⇒ 列舉這個字串等於列舉模組外的全部建構點。
+#
+# 用 strip_comments.py 先剝掉註解再找，因為註解裡提到這個名字是正常的
+# （檔頭要解釋 R16），只有**程式碼**裡的出現才算建構點。
+#   同一支腳本也會找 `_private`：Lean 的 private 名稱在 olean 裡是
+#   `_private.<module>.<n>.<name>`，理論上打得出來，那是繞過模組抽象的逃生門。
+#
+# 白名單:
+#   SortRubric/Opt06_Ticks.lean   定義處
+#   SortRubric/Opt10_Audit.lean   稽核
+#   SortRubric/**/*_Tests.lean    SPOTs
+r16_hits=$(python3 SortRubric/strip_comments.py $(find SortRubric -name '*.lean' | sort) 2>/dev/null)
+if [ -z "$r16_hits" ]; then
+  echo "  ✓ 程式碼裡沒有任何 mkForTesting / _private"
+else
+  r16_bad=0
+  while IFS= read -r hit; do
+    [ -z "$hit" ] && continue
+    f="${hit%%:*}"
+    case "$f" in
+      SortRubric/Opt06_Ticks.lean) echo "      [定義處    ] $hit" ;;
+      SortRubric/Opt10_Audit.lean) echo "      [稽核      ] $hit" ;;
+      *_Tests.lean)                echo "      [SPOTs     ] $hit" ;;
+      *) echo "      [✗ 違反 R16] $hit"; FAIL=1; r16_bad=1 ;;
+    esac
+  done <<< "$r16_hits"
+  [ "$r16_bad" = 0 ] && echo "  ✓ 全部落在白名單內（定義處 / Opt10_Audit / *_Tests）"
 fi
 
 echo

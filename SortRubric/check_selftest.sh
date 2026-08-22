@@ -54,6 +54,39 @@ fi
 rm -f "$PROBE"
 
 echo
+echo "########## 負向測試 4：R16 抓不抓得到 mkForTesting 外洩 ##########"
+# 模擬一支實作檔（不在白名單）拿公開起點造 Ticks —— 等於把 ResetToOld 送回來
+cat > "$PROBE" <<'EOF'
+import SortRubric.Opt06_Ticks
+open SortRubric.Opt06 in
+example : Ticks := Ticks.mkForTesting 0
+EOF
+if bash SortRubric/check_isolation.sh > /dev/null 2>&1; then
+  fail "check_isolation.sh 對白名單外的 mkForTesting 竟然回傳 0 —— R16 失效"
+else
+  pass "check_isolation.sh 正確拒絕白名單外的 mkForTesting（非零離開碼）"
+  echo "      證據："
+  bash SortRubric/check_isolation.sh 2>&1 | grep -E '違反 R16' | head -2 | sed 's/^/        /'
+fi
+rm -f "$PROBE"
+
+echo
+echo "########## 負向測試 5：R16 的註解剝除會不會誤判 ##########"
+# 反向：只在**註解**裡提到 mkForTesting，不該被判違規（否則檔頭沒辦法解釋 R16）
+cat > "$PROBE" <<'EOF'
+/-! 這個檔頭提到 Ticks.mkForTesting 與 _private，但程式碼裡沒有用。 -/
+-- 行註解裡的 mkForTesting 也一樣
+example : Nat := 0
+EOF
+if bash SortRubric/check_isolation.sh > /dev/null 2>&1; then
+  pass "check_isolation.sh 正確忽略註解裡的 mkForTesting（不誤判）"
+else
+  fail "check_isolation.sh 把註解裡的 mkForTesting 當成違規 —— 剝除註解失效"
+  bash SortRubric/check_isolation.sh 2>&1 | grep -E '違反 R16' | head -2 | sed 's/^/        /'
+fi
+rm -f "$PROBE"
+
+echo
 echo "########## 負向測試 3：baseline 比對抓不抓得到新錯誤 ##########"
 echo "error: FakeModule.lean:1:1: 這是一個不存在的錯誤" >> "$BASE"
 bash SortRubric/check_build.sh > /dev/null 2>&1
