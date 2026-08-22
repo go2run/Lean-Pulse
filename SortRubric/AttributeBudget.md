@@ -43,6 +43,9 @@
 | 引理 | 宣告於 | 為什麼保持 local |
 |---|---|---|
 | `Ticks.val_bump` | `Opt06_MonotonicTicks` | ★ 用 `attribute [local grind]`。`loom_solve` **不吃引理參數**（`Loom/CaseStudies/Tactic.lean:65`），所以 `grind [Ticks.val_bump]` 這條路走不通；`local` 屬性有全域屬性的效力，但**不外洩給 importer**，從結構上消掉第 04 次 `tick_step` 那一類事故。**這應該是 07/08 的預設做法。** |
+| `InstrOrder.correct` / `.charged` / `.correct_false` | `Opt07_InstrOrder`、`Opt08a_AbstractCore` | 純函式版的 `cmp` 規格是**等式／iff**，grind 可直接當 rewrite。`local` ⇒ 不外洩 |
+| `SpecOrder.trans` / `.le_refl` / `.not_le` | `Opt08a_AbstractCore` | 抽象序沒有內建推理，全部要手餵。⚠ `trans` 是傳遞律，全域掛上去容易爆搜尋空間——**這正是為什麼用 `local`** |
+| `Sorted` / `SameElements`（抽象版 `def`） | `Opt08a_AbstractCore` | 與第 02 次同樣是「前提性」；改用 `local`，代價是下游模組要自己寫一次 |
 | `SameElements.size_eq` | `Opt05b_Composition` | 只在組合定理裡用到 1 處，遠低於 P1 的 ≥3 門檻。它是 `Multiset.card` 的 congruence，掛上去會讓 grind 對每個 `SameElements` 假設都多生一條 size 等式 |
 
 ## 預留：後續步驟預期會來申請的
@@ -52,4 +55,29 @@
 | ~~06~~ | ~~`Ticks.val_bump`~~ | — | ✅ **已解決，未動用全域**：`attribute [local grind]`，見上表 |
 | 07 | `InstrOrder.correct` / `InstrOrder.charged` | 純函式版的 `cmp` 規格是**等式**，grind 可直接當 rewrite | 用 `attribute [local grind]`（第 06 次已驗證這條路可行） |
 | 08 | `SpecOrder.trans` / `.total` | `grind` 對抽象序沒有內建推理，全部要手餵 | ⚠ 高風險：`trans` 是**傳遞律**，掛全域 grind 容易爆搜尋空間。預設 local，且優先寫成手動 `apply ord.trans` 鏈 |
-| 08 | `[Inhabited α]`（typeclass，非屬性） | `a[i]!` 需要它；真正的阻塞點是 `Array.multiset_swap [Inhabited α]` | 已在 README 的 typeclass 預算表論證：`Inhabited` **不提供任何比較能力**，面 3 不受影響 |
+| ~~08~~ | ~~`SpecOrder.trans` / `.total`~~ | — | ✅ **已解決，未動用全域**：`attribute [local grind]` |
+
+
+## α 的 typeclass 預算（R11）—— 實測版
+
+| typeclass | 出現在 | 為什麼需要 | 面 3 受影響嗎 |
+|---|---|---|---|
+| `[Inhabited α]` | `Opt08a_AbstractCore` 的 `Sorted`、`minIndex`、（將來的）08b | `a[i]!` 需要它；**真正的阻塞點是 `Array.multiset_swap [Inhabited α]`**（`Velvet/Std.lean:104`），那條是 multiset 保存 invariant 的唯一來源 | ❌ **不受影響**。它讓實作造得出一個 α 的值（＝抽象版的 `ZeroFill`），但那支作弊在第 02 次已被 `SameElements` 機械反證殺掉；而且 `Inhabited` **給不出 `Decidable`**，四條繞過路徑一條都沒開 |
+
+**完全避開的代價**：改用 `a[i]'h`（帶證明的索引）⇒ spec 形狀改變 + 所有既有引理重寫。
+收尾期不做這個交換。
+
+### ✗ 永遠不得加入的（加了面 3 靜默失效）
+
+```
+[DecidableEq α]   [DecidableRel …]   [DecidableLT α]   [DecidableLE α]
+[FinEnum α]       [LT α]  [LE α]  [Ord α]  [Min α]  [Max α]
+[∀ x y, Decidable (ord.le x y)]
+```
+
+**由 `check_isolation.sh` 的「面 3」段 fail-closed 強制**，
+白名單只有 `Cheats/Opt08_Cheat_BypassWithInt.lean`（它故意示範這些陷阱）。
+負向測試見 `check_selftest.sh` 第 6 項。
+
+理由見 `Opt08_Notes.md` §2：**這是本專案唯一一個「加了東西反而變弱、
+而且完全靜默」的失效模式。**

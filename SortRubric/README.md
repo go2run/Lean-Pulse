@@ -124,7 +124,8 @@ ticks := t_in                -- 把複製品放回去
 | 05.5 | `Opt05b_Composition` | rubric 層（非 method 層）的界限可組合 | **（不防作弊）** 補驗，非新的一刀 | ✅ | 低 |
 | 06 | `Opt06_MonotonicTicks` | M1 抽象 `Ticks`（`private mk`） | 無視呼叫端起點，直接報 0 | ✅ | 中 |
 | 07 | `Opt07_InstrOrder` | M2 面 1：比較器必計費、不說謊 | 不計費／亂回答的比較器 | ✅ | 中 |
-| 08 | `Opt08_AbstractElem` | M2 面 3：`SpecOrder`(Prop) + 抽象 α | 用 `Int` 直接 `x < y` 繞過比較器 | ⬜ | **高** |
+| 08a | `Opt08a_AbstractCore` | M2 面 3：`SpecOrder`(Prop) + 抽象 α | 用 `Int` 直接 `x < y` 繞過比較器 | ✅ | **高** |
+| 08b | `Opt08b_AbstractSort` | 完整的抽象插入排序 | —（加分項，非鑑別內容） | 🚫 **BLOCKED** | **高** |
 | 09 | `Opt09_SortM` | M2 面 2：計數器身分 | `let mut fake := ticks` 分身 | ⬜ | **必要，且已知受限**※ |
 | 10 | `Opt10_Audit` | D 軸：`#print axioms` + SPOTs | `sorry` 掉整個 spec | ⬜ | 低 |
 | 11 | `Opt11_Termination`（選配） | total correctness | `while true do skip` | ⬜ | 高（三倍抄寫） |
@@ -284,7 +285,7 @@ Cheats/
 | `Unresolved_ResetToOld` | — | — | —（它**通過**，而且住得進 `ArraySort (fun _ => 0)`） |
 | `Unresolved_DiscardCmpTicks` | — | — | —（它**通過**：真的經過誠實比較器 28 次，報 0） |
 | `Unresolved_CopyThenRebump` | — | — | —（它**通過**：與 `ForgeMidpoint` 同行為，改用複製達成） |
-| `Unresolved_BypassWithInt` | —（預定 Opt08） | — | —（它**通過**，這是第 08 次存在的理由） |
+| `Opt08_Cheat_BypassWithInt` | Opt08a | ★ **型別**（`ord.le` 是 `Prop`，無 `Decidable`） | `failed to synthesize Decidable (ord.le a[0]! a[1]!)`；`failed to synthesize LT α`（四條路徑） |
 | `Unresolved_FakeCounter` | — | — | —（它**通過**） |
 | `Unresolved_FakeCounterPadded` | — | — | —（它**通過**） |
 | `Upstream_Contamination{A,B,Control}` | —（上游 bug 重現 + 控制組） | — | — |

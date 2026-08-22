@@ -87,6 +87,24 @@ fi
 rm -f "$PROBE"
 
 echo
+echo "########## 負向測試 6：面 3 抓不抓得到 typeclass 洩漏 ##########"
+# 模擬有人「只是讓規格好用一點」而加上 α 的可判定性 —— 面 3 會靜默失效
+cat > "$PROBE" <<'EOF'
+import SortRubric.Opt08a_AbstractCore
+open SortRubric.Opt08 in
+example {α : Type} [Inhabited α] [DecidableEq α] (a : Array α) : Bool :=
+  if a[0]! = a[1]! then true else false
+EOF
+if bash SortRubric/check_isolation.sh > /dev/null 2>&1; then
+  fail "check_isolation.sh 對白名單外的 [DecidableEq α] 竟然回傳 0 —— 面 3 的守衛失效"
+else
+  pass "check_isolation.sh 正確拒絕白名單外的可計算 typeclass（非零離開碼）"
+  echo "      證據："
+  bash SortRubric/check_isolation.sh 2>&1 | grep -E '面 3 失效' | head -2 | sed 's/^/        /'
+fi
+rm -f "$PROBE"
+
+echo
 echo "########## 負向測試 3：baseline 比對抓不抓得到新錯誤 ##########"
 echo "error: FakeModule.lean:1:1: 這是一個不存在的錯誤" >> "$BASE"
 bash SortRubric/check_build.sh > /dev/null 2>&1

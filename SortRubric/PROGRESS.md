@@ -14,7 +14,8 @@
 | 05.5 | Composition | ✅ 完成 | ✓ 全過 | （不防作弊） | ★ rubric 層界限可組合。做法 (a)：2 行 local 引理，**未動 spec**。兩組反向控制組 + 機械反證 |
 | 06 | MonotonicTicks | ✅ 完成 | ✓ 全過 | 2 個（`ForgeZero`、`ForgeMidpoint`，皆**型別錯誤**） | ★ **結論與指引不同**：`ResetToOld` 沒死（複製≠建構）。三分法：M1 覆蓋「造」，「複製／丟棄」開著。`ForgeMidpoint`/`CopyThenRebump` 這一對證明 M1 的保證是**被遮住**不是不存在。見 ERRATA §G |
 | 07 | InstrOrder | ✅ 完成 | ✓ 全過 | 1 個（`LyingComparator`，證明失敗） | 純函式 `cmp` 定案正確：**第一次就過，17 秒**。買不到的兩件事都有活著的作弊 |
-| 08 | AbstractElem | ⬜ 未開始 | | | 前提已驗證；風險高（U3）。**fallback 階梯已定案**（見上方 D-08） |
+| 08a | AbstractCore | ✅ 完成 | ✓ 全過 | 1 個（`BypassWithInt`，**型別錯誤**） | 面 3 達成。★ 面 3 的保證＝「typeclass 清單乾淨」，已由 `check_isolation.sh` fail-closed 強制 |
+| 08b | AbstractSort | 🚫 BLOCKED | — | — | R8 兩次未過。卡在 swap 分支的序 invariant（`grind` 在不透明 predicate 上的 e-matching）。**與面 3 論點無關**，診斷見 Opt08_Notes §5 |
 | 09 | SortM | ⬜ 未開始 | | | ★ 實驗性。**實驗 2 已提前完成：作弊通過** |
 | 10 | Audit | ⬜ 未開始 | | | `#print axioms` 已確認可用 |
 | 11 | Termination（選配） | ⬜ 未開始 | | | 代價已核實：三份 body |

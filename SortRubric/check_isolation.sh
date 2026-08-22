@@ -114,7 +114,7 @@ echo "=== [R16] Ticks 的公開起點 mkForTesting 出現在哪些檔？（fail-
 #   SortRubric/Opt06_Ticks.lean   定義處
 #   SortRubric/Opt10_Audit.lean   稽核
 #   SortRubric/**/*_Tests.lean    SPOTs
-r16_hits=$(python3 SortRubric/strip_comments.py $(find SortRubric -name '*.lean' | sort) 2>/dev/null)
+r16_hits=$(python3 SortRubric/strip_comments.py 'mkForTesting|_private' $(find SortRubric -name '*.lean' | sort) 2>/dev/null)
 if [ -z "$r16_hits" ]; then
   echo "  ✓ 程式碼裡沒有任何 mkForTesting / _private"
 else
@@ -130,6 +130,37 @@ else
     esac
   done <<< "$r16_hits"
   [ "$r16_bad" = 0 ] && echo "  ✓ 全部落在白名單內（定義處 / Opt10_Audit / *_Tests）"
+fi
+
+echo
+echo "=== [面 3] α 上有沒有可計算的 typeclass 假設？（fail-closed 白名單）==="
+# 為什麼這一段是面 3 的**強制機制**而不是文件:
+#   面 3（「除了 iord 沒有別的觀察 α 的途徑」）由型別錯誤保證，
+#   但那個保證的前提是「α 上沒有任何可計算的結構」。
+#   只要有人加一個 [DecidableEq α] / [DecidableRel] / [FinEnum α] /
+#   [∀ x y, Decidable (ord.le x y)]，作弊就當場復活，
+#   **而且不會有任何錯誤訊息、任何警告**。
+#   ⇒ 這是本專案唯一一個「加了東西反而變弱、且完全靜默」的失效模式，
+#     必須用 grep 守。
+# 白名單:
+#   Cheats/Opt08_Cheat_BypassWithInt.lean  ——它**故意**示範這三個陷阱，
+#                                            那幾行編譯成功正是它要證明的事
+face3_pat='\[[^]]*(DecidableEq|DecidableRel|DecidableLT|DecidableLE|FinEnum)|Decidable \(ord\.|\[(LT|LE|Ord|Min|Max) '
+face3_hits=$(python3 SortRubric/strip_comments.py "$face3_pat" $(find SortRubric -name '*.lean' | sort) 2>/dev/null)
+if [ -z "$face3_hits" ]; then
+  echo "  ✓ 程式碼裡沒有任何 α 上的可計算 typeclass 假設"
+else
+  face3_bad=0
+  while IFS= read -r hit; do
+    [ -z "$hit" ] && continue
+    f="${hit%%:*}"
+    case "$f" in
+      SortRubric/Cheats/Opt08_Cheat_BypassWithInt.lean)
+        echo "      [示範陷阱  ] $hit" ;;
+      *) echo "      [✗ 面 3 失效] $hit"; FAIL=1; face3_bad=1 ;;
+    esac
+  done <<< "$face3_hits"
+  [ "$face3_bad" = 0 ] && echo "  ✓ 只出現在故意示範陷阱的那一支 cheat 裡"
 fi
 
 echo
