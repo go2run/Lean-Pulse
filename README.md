@@ -89,5 +89,5 @@ lake build          # 會抓取 Velvet/Loom 相依並驗證所有檔案
 
 > 注意：本專案在無法連外的環境中撰寫，尚未實際以 `lake build` 驗證過；
 > `attribute [grind]` 提示與個別 `prove_correct` 可能需要按照
-> [Velvet 文件](https://github.com/verse-lab/velvet/blob/master/velvet_documentation.md)
+> [Velvet 文件](https://github.com/verse-lab/velvet/blob/d254391d5e84546f96576e5b67dfb6bafe9fc301/velvet_documentation.md)
 > 的除錯流程（`loom_solve!`、補 lemma hint、調 `splits`/`maxHeartbeats`）微調。

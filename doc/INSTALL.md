@@ -1,5 +1,8 @@
 # 安裝與建置說明
 
+> **Velvet 版本：V1**（Loom 架構，固定在 commit [`d254391`](https://github.com/verse-lab/velvet/tree/d254391d5e84546f96576e5b67dfb6bafe9fc301)，Lean `v4.24.0`）。
+> 本文件適用於所有 `v1/*` 分支。V2（Lean `v4.34.0`）的建置方式見 `main` 分支的 README。
+
 本專案是 Lean 4 專案，用 [Velvet](https://github.com/verse-lab/velvet) 驗證器改寫
 Pulse 教程。以下說明如何從零把環境裝好並成功 `lake build`。
 
@@ -57,13 +60,13 @@ lake build
 2. 編譯全部相依（約 1000+ 個目標，mathlib 最耗時）。
 3. 執行 Velvet 的 `downloadDependencies`，自動下載 **z3** 與 **cvc5** 到
    `.lake/packages/Velvet/.lake/packages/Loom/.lake/build/`。
-4. 最後才驗證本專案 5 個檔案（`Hello`／`PulseByExample`／`Intro`／`Ref`／`Box`）。
+4. 最後才驗證本分支自己的檔案。
 
 `prove_correct` 預設用 Lean 的 `grind`；需要 SMT 時會呼叫上面下載好的 z3/cvc5。
 
 ### 4. 驗證單一檔案（可選）
 
-想只重建某個檔案：
+想只重建某個檔案，把模組名交給 `lake build`，例如 `v1/LeanPulse` 分支的：
 
 ```sh
 lake build LeanPulse.Ref
@@ -85,7 +88,7 @@ lake build LeanPulse.Ref
   最後手段可刪掉 `.lake/` 重建（會重新下載一切，較久）。
 
 - **`prove_correct` 驗證失敗**：這是證明層問題，非安裝問題。依
-  [Velvet 文件](https://github.com/verse-lab/velvet/blob/master/velvet_documentation.md)
+  [Velvet 文件](https://github.com/verse-lab/velvet/blob/d254391d5e84546f96576e5b67dfb6bafe9fc301/velvet_documentation.md)
   的除錯流程處理（`loom_solve!`、補 lemma hint、調 `splits`／`maxHeartbeats`）。
 
 ## 環境檢查小抄

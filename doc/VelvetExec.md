@@ -755,6 +755,6 @@ lean_exe + Main.lean              編譯成原生執行檔
 
 - [VelvetTutorial.md](VelvetTutorial.md) — Velvet 語法入門六例
 - [INSTALL.md](INSTALL.md) — 環境安裝與建置
-- [Velvet 官方文件](https://github.com/verse-lab/velvet/blob/master/velvet_documentation.md) — §6 Testing
+- [Velvet 官方文件](https://github.com/verse-lab/velvet/blob/d254391d5e84546f96576e5b67dfb6bafe9fc301/velvet_documentation.md) — §6 Testing
 - `.lake/packages/Loom/Loom/MonadAlgebras/NonDetT/Extract.lean` — `NonDetT.run` 與 refinement 定理
 - `.lake/packages/Velvet/Velvet/Syntax.lean` — 上面每個命令的 elaborator

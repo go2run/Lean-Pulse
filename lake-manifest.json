@@ -8,7 +8,7 @@
    "rev": "d254391d5e84546f96576e5b67dfb6bafe9fc301",
    "name": "Velvet",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "master",
+   "inputRev": "d254391d5e84546f96576e5b67dfb6bafe9fc301",
    "inherited": false,
    "configFile": "lakefile.lean"},
   {"url": "https://github.com/verse-lab/loom.git",
