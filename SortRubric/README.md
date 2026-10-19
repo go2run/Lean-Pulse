@@ -1,6 +1,9 @@
 # SortRubric — 用十次優化把「看起來像排序」逼成「只有真排序才滿足」
 
 > ### ⚠ 關於本專案的 build 狀態
+> **拆分後（`v1/SortRubric` 分支）：** 本分支已不含 `VelvetLC917`（移到 `v1/LC917`），完整
+> `lake build` 為全綠，[`baseline_errors.txt`](baseline_errors.txt) 因此是空檔。以下是拆分前的說明，保留作紀錄。
+>
 > **本專案的基準 `lake build` 在 commit `69e292a` 即為紅燈（`VelvetLC917` 三個錯誤），與 `SortRubric/` 無關。**
 > 該紅燈早於本資料夾存在，`SortRubric/` 的 import 閉包**不含**任何專案根目錄模組（機械證明見
 > [`check_isolation.sh`](check_isolation.sh)）。
