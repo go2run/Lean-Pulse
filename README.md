@@ -1,27 +1,12 @@
-# Lean-Pulse
+# Lean-Pulse：Velvet V1 教學
 
-用 [Velvet](https://github.com/verse-lab/velvet)（Lean 4 內嵌的基礎式多模態驗證器，
-[CAV'26 論文](https://ilyasergey.net/assets/pdf/papers/velvet-cav26.pdf)）改寫
-[pulse-sandbox](https://github.com/FStarLang/pulse-sandbox) 教程的練習專案。
-
-## 第一階段：入門（separation logic 直覺 → Velvet 值語意）
-
-| Pulse 原檔 | 本專案 | 主題 |
-|---|---|---|
-| `Hello.fst` | `LeanPulse/Hello.lean` | 最小驗證程式、`method`/`prove_correct` |
-| `src/PulseByExample.fst` | `LeanPulse/PulseByExample.lean` | 規格、swap、陣列、迴圈不變式 |
-| `PulseTutorial.Intro.fst` | `LeanPulse/Intro.lean` | incr、ghost 參數、frame rule |
-| `PulseTutorial.Ref.fst` | `LeanPulse/Ref.lean` | 讀寫、權限模型的對應、失敗案例 |
-| `PulseTutorial.Box.fst` | `LeanPulse/Box.lean` | 堆積配置/釋放的顯式建模 |
-
-核心翻譯原則（詳見各檔案開頭的對照表）：
-
-- `pts_to r 'v`（擁有 + ghost 初值）↦ `mut` 參數 + `rOld`
-- 分數權限（唯讀共享）↦ 非 `mut` 參數
-- `p ** q`（分離）↦ 值語意下不同參數天生不 alias
-- frame rule ↦ 沒宣告 `mut` 的東西不可能被改（免費）
-- `Box.alloc`/`free` ↦ 顯式 store 建模（`Array (Option Int)`），frame 條款手寫
-- Pulse 的並行（`par`）：Velvet 無對應——這是分離邏輯不可替代的地盤
+> **Velvet 版本：V1**（Loom 架構，固定在 commit
+> [`d254391`](https://github.com/verse-lab/velvet/tree/d254391d5e84546f96576e5b67dfb6bafe9fc301)，Lean `v4.24.0`）。
+> 上游 Velvet 已改寫成 V2（tag `v2.0`，Lean `v4.34.0`），語法不相容，兩者也沒有共同歷史。
+> 本分支保留 V1 時期的成果，不跟著升級；V2 的新工作在 [`main`](https://github.com/go2run/Lean-Pulse/tree/main)。
+>
+> **這是 V1 教學。** 這裡用到的 `loom_solve`、`DivM`、`extract_program_for`、`(mut …)` 參數等
+> 在 V2 都已不存在，內容不適用於 V2。
 
 ## Velvet 入門教材
 
@@ -58,36 +43,26 @@ lake build velvet_demo             # 編譯成原生執行檔
 
 產物說明（哪個能直接執行、哪個是中間檔）見 [ffi/README.md](ffi/README.md)。
 
-## Velvet 自動化的邊界：LeetCode 917
-
-拿 [Reverse Only Letters](https://leetcode.com/problems/reverse-only-letters/) 當實例，
-兩個獨立 `lean_lib`：
-
-- [LeanLC917.lean](LeanLC917.lean) — 純 Lean 4 前向掃描解法 + 完整正確性證明。
-  **零相依**（連 Velvet 和 mathlib 都不用），可以單獨拿走。
-- [VelvetLC917.lean](VelvetLC917.lean) — 同一題的 Velvet 雙指標版，規格引用
-  `LeanLC917.revOnly` 當參考實作。完整規格 `loom_solve` 證不出來（附實際錯誤訊息與診斷）；
-  換成弱規格會自動過，但「什麼都不做」也一樣過。
-
-```sh
-lake build LeanLC917 VelvetLC917
-```
-
 ## 建置
 
-需要 [elan](https://github.com/leanprover/elan)（Lean 工具鏈管理器）與網路：
+需要 [elan](https://github.com/leanprover/elan) 與網路；Lean 版本由 `lean-toolchain` 固定為 `v4.24.0`。
 
 ```sh
-lake build          # 會抓取 Velvet/Loom 相依並驗證所有檔案
+lake build                  # VelvetTutorial + VelvetExec
 ```
 
-`prove_correct` 預設用 Lean 的 `grind`；SMT 後端（z3/cvc5）由 Velvet
-的建置流程自動下載。
+第一次建置需下載約 7 GB 相依（含 mathlib），耗時 10 分鐘以上。`prove_correct` 預設用 Lean 的
+`grind`；SMT 後端（z3/cvc5）由 Velvet 的建置流程自動下載。完整需求、步驟與常見問題見
+[doc/INSTALL.md](doc/INSTALL.md)。
 
-> 完整的安裝需求、步驟與常見問題見 [INSTALL.md](INSTALL.md)。
-> 第一次建置需下載約 7 GB 相依（含 mathlib）並耗時 10 分鐘以上。
+## 分支一覽
 
-> 注意：本專案在無法連外的環境中撰寫，尚未實際以 `lake build` 驗證過；
-> `attribute [grind]` 提示與個別 `prove_correct` 可能需要按照
-> [Velvet 文件](https://github.com/verse-lab/velvet/blob/d254391d5e84546f96576e5b67dfb6bafe9fc301/velvet_documentation.md)
-> 的除錯流程（`loom_solve!`、補 lemma hint、調 `splits`/`maxHeartbeats`）微調。
+| 分支 | 內容 | Velvet |
+|---|---|---|
+| [`main`](https://github.com/go2run/Lean-Pulse/tree/main) | PoP | **V2**（`v2.0`，Lean `v4.34.0`） |
+| [`v1/LeanPulse`](https://github.com/go2run/Lean-Pulse/tree/v1/LeanPulse) | 用 Velvet 改寫 pulse-sandbox 教程（`LeanPulse/`） | V1 |
+| [`v1/SortRubric`](https://github.com/go2run/Lean-Pulse/tree/v1/SortRubric) | 排序 rubric 分階段強化（`SortRubric/`） | V1 |
+| [`v1/tutorial`](https://github.com/go2run/Lean-Pulse/tree/v1/tutorial) | V1 教學：VelvetTutorial、VelvetExec、VelvetFFI + `ffi/`、`doc/` | V1 |
+| [`v1/LC917`](https://github.com/go2run/Lean-Pulse/tree/v1/LC917) | LeetCode 917：`LeanLC917` + `VelvetLC917` | V1 |
+
+`v1/*` 分支與 `main` 都從同一個 commit `5e1075a`（V1 固定版本）分出，各自保有完整歷史。

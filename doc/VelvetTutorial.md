@@ -1,5 +1,10 @@
 # Velvet 入門：用六個例子走完一輪
 
+> **V1 教學**：本文以 Velvet V1（Loom 架構，commit
+> [`d254391`](https://github.com/verse-lab/velvet/tree/d254391d5e84546f96576e5b67dfb6bafe9fc301)，Lean `v4.24.0`）為準。
+> V2（tag `v2.0`，Lean `v4.34.0`）已重寫，`loom_solve`、`DivM`、`extract_program_for`、
+> `(mut …)` 參數等都不再存在，本文不適用於 V2。
+
 > **關於這份教材**
 > 每一節引進一組新語法，並且**只**引進那一組。前一節出現過的東西不再解釋，所以請照順序讀。
 > 六節走完，你會寫過純函數、陣列變更、迴圈不變式、method 組合、互動式證明、終止性證明各一次。

@@ -1,5 +1,10 @@
 # Velvet 怎麼跑：從 `method` 到原生執行檔
 
+> **V1 教學**：本文以 Velvet V1（Loom 架構，commit
+> [`d254391`](https://github.com/verse-lab/velvet/tree/d254391d5e84546f96576e5b67dfb6bafe9fc301)，Lean `v4.24.0`）為準。
+> V2（tag `v2.0`，Lean `v4.34.0`）已重寫，`loom_solve`、`DivM`、`extract_program_for`、
+> `(mut …)` 參數等都不再存在，本文不適用於 V2。
+
 > **關於這份教材**
 > 回答兩個問題：**(1) Velvet 在 Lean 4 裡到底是怎麼執行的**、**(2) 怎麼把驗證過的
 > 程式抽出來、編譯成可以獨立跑的執行檔**。
@@ -678,7 +683,7 @@ oracle 對你手寫的版本做差分測試——同一組隨機輸入餵兩邊�
 成本就是那個等價證明：**無迴圈兩行，有迴圈要動 `fixpoint_induct`**（§7.0）。
 迴圈多的程式，這條路可能比重新在目標語言裡驗證還貴——先估算再投入。
 
-本專案的 [LeanLC917.lean](../LeanLC917.lean) 就是這種「零相依純 Lean + 完整證明」的樣子。
+[`v1/LC917`](https://github.com/go2run/Lean-Pulse/tree/v1/LC917) 分支的 [LeanLC917.lean](https://github.com/go2run/Lean-Pulse/blob/v1/LC917/LeanLC917.lean) 就是這種「零相依純 Lean + 完整證明」的樣子。
 
 ### 7.4 選哪條
 
