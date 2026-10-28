@@ -3,7 +3,8 @@
 > **Velvet 版本：V2**（tag [`v2.0`](https://github.com/verse-lab/velvet/tree/v2.0)，commit `8b7dc75`，
 > Lean `v4.34.0`）。V1（Loom 架構，Lean `v4.24.0`）時期的成果保留在 `v1/*` 分支，兩者語法不相容。
 
-`PoP/` 是本分支的主要內容，以 Velvet V2 撰寫，目前只有骨架。
+`PoP/` 是本分支的主要內容，以 Velvet V2 撰寫。目前只有 [`PoP/Quickstart.lean`](PoP/Quickstart.lean)：
+把 V1 的 `VelvetExec` / `Ref` 範例移植到 V2 的最小範例，檔頭附 V1 → V2 語法對照表。
 
 ## 建置
 
